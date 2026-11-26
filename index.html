@@ -27,208 +27,7 @@
       animation: globalOverlayFadeOut 0.62s ease-in-out forwards;
     }
 
-    @keyframes cellArcaneFadeIn {
-      0% {
-        opacity: 0.25;
-        transform: scale(0.92);
-        box-shadow: 0 0 0 rgba(168, 85, 247, 0);
-        filter: brightness(0.85);
-      }
-      65% {
-        opacity: 1;
-        transform: scale(1.03);
-        box-shadow: 0 0 18px rgba(192, 132, 252, 0.75);
-        filter: brightness(1.18);
-      }
-      100% {
-        opacity: 1;
-        transform: scale(1);
-        filter: brightness(1);
-      }
-    }
 
-    @keyframes cellArcaneFadeOut {
-      0% {
-        opacity: 1;
-        transform: scale(1);
-        filter: brightness(1);
-      }
-      100% {
-        opacity: 0.18;
-        transform: scale(0.95);
-        box-shadow: 0 0 0 rgba(168, 85, 247, 0);
-        filter: brightness(0.75);
-      }
-    }
-
-    @keyframes cellPlantFadeIn {
-      0% {
-        opacity: 0.2;
-        transform: scale(0.9) translateY(5px);
-        filter: saturate(0.4) brightness(0.85);
-      }
-      70% {
-        opacity: 1;
-        transform: scale(1.02) translateY(-1px);
-        filter: saturate(1.25) brightness(1.12);
-      }
-      100% {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-        filter: saturate(1) brightness(1);
-      }
-    }
-
-    @keyframes cellPlantFadeOut {
-      0% {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-        filter: saturate(1) brightness(1);
-      }
-      100% {
-        opacity: 0.15;
-        transform: scale(0.92) translateY(6px);
-        filter: saturate(0.35) brightness(0.75);
-      }
-    }
-
-    @keyframes cellEarthFadeIn {
-      0% {
-        opacity: 0.2;
-        transform: scale(0.93) translateY(4px);
-        filter: contrast(0.8) brightness(0.82);
-      }
-      60% {
-        opacity: 1;
-        transform: scale(1.02) translateY(-1px);
-        filter: contrast(1.12) brightness(1.08);
-      }
-      100% {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-        filter: contrast(1) brightness(1);
-      }
-    }
-
-    @keyframes cellEarthFadeOut {
-      0% {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-        filter: contrast(1) brightness(1);
-      }
-      100% {
-        opacity: 0.15;
-        transform: scale(0.93) translateY(5px);
-        filter: contrast(0.75) brightness(0.72);
-      }
-    }
-
-    @keyframes cellMetalFadeIn {
-      0% {
-        opacity: 0.2;
-        transform: scale(0.94);
-        filter: brightness(0.7) contrast(1.25);
-      }
-      65% {
-        opacity: 1;
-        transform: scale(1.02);
-        filter: brightness(1.32) contrast(1.15);
-      }
-      100% {
-        opacity: 1;
-        transform: scale(1);
-        filter: brightness(1) contrast(1);
-      }
-    }
-
-    @keyframes cellMetalFadeOut {
-      0% {
-        opacity: 1;
-        transform: scale(1);
-        filter: brightness(1) contrast(1);
-      }
-      100% {
-        opacity: 0.15;
-        transform: scale(0.94);
-        filter: brightness(0.68) contrast(1.1);
-      }
-    }
-
-    @keyframes cellAshFadeIn {
-      0% {
-        opacity: 0.25;
-        transform: scale(0.95);
-        filter: grayscale(0.2) brightness(1.15);
-      }
-      65% {
-        opacity: 0.92;
-        transform: scale(1.01);
-        filter: grayscale(0.85) brightness(0.85);
-      }
-      100% {
-        opacity: 1;
-        transform: scale(1);
-        filter: grayscale(1) brightness(0.78);
-      }
-    }
-
-    @keyframes cellAshFadeOut {
-      0% {
-        opacity: 1;
-        transform: scale(1);
-        filter: grayscale(1) brightness(0.78);
-      }
-      100% {
-        opacity: 0.1;
-        transform: scale(0.94);
-        filter: grayscale(1) brightness(0.55);
-      }
-    }
-
-    .bingo-cell.cell-paint-in-arcane {
-      animation: cellArcaneFadeIn 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
-    }
-
-    .bingo-cell.cell-paint-out-arcane {
-      pointer-events: none;
-      animation: cellArcaneFadeOut 0.48s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    }
-
-    .bingo-cell.cell-paint-in-plant {
-      animation: cellPlantFadeIn 0.56s cubic-bezier(0.22, 1, 0.36, 1) both;
-    }
-
-    .bingo-cell.cell-paint-out-plant {
-      pointer-events: none;
-      animation: cellPlantFadeOut 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    }
-
-    .bingo-cell.cell-paint-in-earth {
-      animation: cellEarthFadeIn 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
-    }
-
-    .bingo-cell.cell-paint-out-earth {
-      pointer-events: none;
-      animation: cellEarthFadeOut 0.48s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    }
-
-    .bingo-cell.cell-paint-in-metal {
-      animation: cellMetalFadeIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-    }
-
-    .bingo-cell.cell-paint-out-metal {
-      pointer-events: none;
-      animation: cellMetalFadeOut 0.48s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    }
-
-    .bingo-cell.cell-paint-in-ash {
-      animation: cellAshFadeIn 0.58s ease-out both;
-    }
-
-    .bingo-cell.cell-paint-out-ash {
-      pointer-events: none;
-      animation: cellAshFadeOut 0.52s ease-in forwards;
-    }
   </style>
 </head>
 <body>
@@ -1629,24 +1428,6 @@
     }
 
     function triggerPostOverlayCellEnterExitAnimations() {
-      if (pendingPostOverlaySpellCells.size === 0 || !latestMatchData) return;
-      const myPlayer = latestMatchData.players?.[currentPlayerId];
-      if (isPlayerFrozenNow(myPlayer) || isAnyBlockingOverlayOpen()) return;
-
-      const indicesToAnimate = Array.from(pendingPostOverlaySpellCells);
-      pendingPostOverlaySpellCells.clear();
-
-      indicesToAnimate.forEach((cellIdx) => {
-        if (typeof cellIdx !== "number" || cellIdx < 0) return;
-        const cellEl = bingoGridEl.querySelector(`.bingo-cell[data-index="${cellIdx}"]`);
-        if (!cellEl) return;
-        cellEl.classList.remove("spell-cell-enter-exit");
-        void cellEl.offsetWidth;
-        cellEl.classList.add("spell-cell-enter-exit");
-        setTimeout(() => {
-          cellEl.classList.remove("spell-cell-enter-exit");
-        }, 1220);
-      });
     }
 
     function flushPostOverlayNotifications() {
@@ -2177,11 +1958,6 @@
         if (!docSnap.exists()) return;
         const data = docSnap.data();
         const isFirstSnapshot = !hasReceivedInitialMatchSnapshot;
-        if (isFirstSnapshot) {
-          snapshotInitialCellPaintThemes(data);
-        } else {
-          recordCellPaintTransitions(data);
-        }
         latestMatchData = data;
 
         const myPlayer = data.players?.[currentPlayerId];
@@ -2513,14 +2289,6 @@
         const cell = document.createElement("div");
         cell.className = "bingo-cell";
         cell.dataset.index = String(i);
-
-        const paintInTheme = pendingCellPaintInThemes.get(i);
-        const paintOutTheme = pendingCellPaintOutThemes.get(i);
-        if (paintOutTheme && (!paintInTheme || paintOutTheme !== paintInTheme)) {
-          cell.classList.add(`cell-paint-out-${paintOutTheme}`);
-        } else if (paintInTheme) {
-          cell.classList.add(`cell-paint-in-${paintInTheme}`);
-        }
 
         const claim = claims[String(i)];
         const earthLock = getActiveEarthLock(matchData, i);
