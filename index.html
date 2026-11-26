@@ -416,6 +416,7 @@
       getFirestore,
       collection,
       doc,
+      getDoc,
       getDocs,
       setDoc,
       updateDoc,
@@ -1493,6 +1494,8 @@
 
     const createEventId = (prefix) => `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
     const getRivalIds = (matchData) => ((matchData && matchData.participantIds) || []).filter((id) => id !== currentPlayerId);
+    const getUnfrozenRivalIds = (matchData) =>
+      getRivalIds(matchData).filter((rid) => !isPlayerFrozenNow(matchData?.players?.[rid]));
 
     function getArcaneChargeRatio(playerData, pid = null, matchData = null) {
       const readyAt = typeof playerData?.arcaneReadyAt === "number" ? playerData.arcaneReadyAt : 0;
@@ -1649,6 +1652,9 @@
     function flushPostOverlayNotifications() {
       const myPlayer = latestMatchData?.players?.[currentPlayerId];
       if (isPlayerFrozenNow(myPlayer)) return;
+      if (latestMatchData) {
+        syncIncomingPotionOverlay(latestMatchData);
+      }
       if (isAnyBlockingOverlayOpen()) return;
 
       if (deferredChargedElements.length > 0) {
@@ -2749,8 +2755,8 @@
         arcaneSpellDesc.textContent = "Reclama esta casilla libre con tu color arcano. Una casilla conquistada nunca podra ser conquistada por otro mago rival.";
       }
 
-      const rivalIds = getRivalIds(latestMatchData);
-      const canFreeze = rivalIds.length > 0 && charges.water >= 3 && !isElementShortCircuited(myPlayer, "water");
+      const unfrozenRivalIds = getUnfrozenRivalIds(latestMatchData);
+      const canFreeze = unfrozenRivalIds.length > 0 && charges.water >= 3 && !isElementShortCircuited(myPlayer, "water");
       setSpellButtonState(btnWaterSpell, waterSpellItem, {
         used: charges.water < 3,
         available: canFreeze
@@ -3679,40 +3685,48 @@
       const myPlayer = latestMatchData.players?.[currentPlayerId];
       if (!myPlayer || getPlayerElementCharges(myPlayer).water < 3 || isElementShortCircuited(myPlayer, "water")) return;
 
-      const rivalIds = getRivalIds(latestMatchData);
-      if (rivalIds.length === 0) return;
+      const unfrozenRivalIds = getUnfrozenRivalIds(latestMatchData);
+      if (unfrozenRivalIds.length === 0) return;
 
       MagicAudioEngine.unlock();
       const cellIndex = selectedSpellCellIndex;
       closeSpellModal();
 
-      if (rivalIds.length > 1) {
-        openWaterTargetSelector(rivalIds, cellIndex);
+      if (unfrozenRivalIds.length > 1) {
+        openWaterTargetSelector(unfrozenRivalIds, cellIndex);
         return;
       }
 
+      const soleTargetId = unfrozenRivalIds[0];
+      const soleTargetName = limitWizardName(latestMatchData?.players?.[soleTargetId]?.name) || "rival";
       startShakeInvocation({
         spellKey: "water",
         spellLabel: "Agua - Congelar Rival",
         cellIndex,
         themeClass: "theme-water",
         glyphs: "❄ 💧 ❄",
-        promptText: "Agita para invocar la congelacion de Agua",
+        promptText: `Agita para congelar a ${soleTargetName} durante 1:30`,
         onConfirmed: async () => {
-          await executeWaterFreeze(rivalIds, cellIndex);
+          await executeWaterFreeze([soleTargetId], cellIndex);
         }
       });
     });
 
     async function executeWaterFreeze(targetIds, cellIndex = null) {
       if (!currentMatchId || !currentPlayerId) return;
+      const freshMatch = (await getFreshMatchSnapshotData()) || latestMatchData;
+      const validTargets = (targetIds || []).filter(
+        (tid) => tid && tid !== currentPlayerId && !isPlayerFrozenNow(freshMatch?.players?.[tid])
+      );
+      if (validTargets.length === 0) return;
+
       const frozenUntil = Date.now() + 90000;
       const updates = {
         [`players.${currentPlayerId}.elementCharges.water`]: 0,
         [`players.${currentPlayerId}.usedSpells.water`]: true,
         updatedAt: serverTimestamp()
       };
-      (targetIds || []).forEach((tid) => {
+      validTargets.forEach((tid) => {
         updates[`players.${tid}.frozenUntil`] = frozenUntil;
       });
       try {
@@ -4112,15 +4126,32 @@
       }
     }
 
-    function getPendingPotionInfo(matchData, playerId) {
-      const ev = matchData?.potionEvent;
-      if (!ev || !ev.requestId || !ev.targetId) return null;
-      if (ev.targetId !== playerId) return null;
-      const pendingByPlayer = matchData?.pendingPotionByPlayer?.[playerId];
-      if (pendingByPlayer && pendingByPlayer.requestId && pendingByPlayer.requestId !== ev.requestId) {
-        return null;
+    function hasAnyActivePotionInMatch(matchData) {
+      if (!matchData) return false;
+      const pendingMap = matchData.pendingPotionByPlayer || {};
+      const hasAnyPending = Object.values(pendingMap).some((p) => p && typeof p === "object" && p.requestId && p.targetId);
+      if (hasAnyPending) return true;
+      const ev = matchData.potionEvent;
+      if (ev && ev.requestId && ev.targetId && !ev.acknowledged) {
+        const targetPending = pendingMap[ev.targetId];
+        if (!targetPending || targetPending.requestId === ev.requestId) {
+          return true;
+        }
       }
-      return ev;
+      return false;
+    }
+
+    function getPendingPotionInfo(matchData, playerId) {
+      if (!playerId || !matchData) return null;
+      const pendingByPlayer = matchData?.pendingPotionByPlayer?.[playerId];
+      if (pendingByPlayer && pendingByPlayer.requestId && pendingByPlayer.targetId === playerId) {
+        return pendingByPlayer;
+      }
+      const ev = matchData?.potionEvent;
+      if (ev && ev.requestId && ev.targetId === playerId && !ev.acknowledged) {
+        return ev;
+      }
+      return null;
     }
 
     function createSubtleBubbleEl(idx, travelPx = 140) {
@@ -4176,6 +4207,7 @@
 
       const matchId = currentMatchId;
       const pid = currentPlayerId;
+      handledPotionRequestId = null;
       hidePotionOverlay();
       if (!matchId || !pid) return;
 
@@ -4251,14 +4283,34 @@
       }, 2200);
     }
 
+    async function getFreshMatchSnapshotData() {
+      if (!currentMatchId) return latestMatchData;
+      try {
+        const snap = await getDoc(doc(db, "duelos", currentMatchId));
+        if (snap.exists()) {
+          const fresh = snap.data();
+          latestMatchData = fresh;
+          return fresh;
+        }
+      } catch (err) {
+        console.error("Error obteniendo snapshot actualizado del duelo:", err);
+      }
+      return latestMatchData;
+    }
+
     async function dispatchPotionToTarget(targetId, targetName, matchData = latestMatchData) {
       if (!currentMatchId || !currentPlayerId) return;
+      const freshMatch = (await getFreshMatchSnapshotData()) || matchData;
+      if (hasAnyActivePotionInMatch(freshMatch)) {
+        return;
+      }
+
       const requestId = `potion_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       handledPotionRequestId = requestId;
 
       const fromId = currentPlayerId;
-      const fromName = limitWizardName(matchData?.players?.[currentPlayerId]?.name) || "Un mago";
-      const resolvedTargetName = limitWizardName(targetName || matchData?.players?.[targetId]?.name) || "Rival";
+      const fromName = limitWizardName(freshMatch?.players?.[currentPlayerId]?.name) || "Un mago";
+      const resolvedTargetName = limitWizardName(targetName || freshMatch?.players?.[targetId]?.name) || "Rival";
 
       const potionEvent = {
         requestId,
@@ -4284,16 +4336,21 @@
     async function executeArcaneSpell(idx) {
       if (!currentMatchId || !currentPlayerId || !latestMatchData) return;
 
-      const rivalIds = getRivalIds(latestMatchData);
+      const freshMatch = await getFreshMatchSnapshotData();
+      if (hasAnyActivePotionInMatch(freshMatch)) {
+        return;
+      }
+
+      const rivalIds = getRivalIds(freshMatch);
       if (rivalIds.length === 0) return;
 
       const rivals = rivalIds.map((rid) => ({
         id: rid,
-        name: limitWizardName(latestMatchData?.players?.[rid]?.name) || "Rival"
+        name: limitWizardName(freshMatch?.players?.[rid]?.name) || "Rival"
       }));
 
       if (rivals.length === 1) {
-        await dispatchPotionToTarget(rivals[0].id, rivals[0].name, latestMatchData);
+        await dispatchPotionToTarget(rivals[0].id, rivals[0].name, freshMatch);
         return;
       }
 
@@ -4311,7 +4368,7 @@
         btn.addEventListener("click", async () => {
           MagicAudioEngine.unlock();
           potionTargetsEl.innerHTML = "";
-          await dispatchPotionToTarget(rival.id, rival.name, latestMatchData);
+          await dispatchPotionToTarget(rival.id, rival.name, freshMatch);
         });
         potionTargetsEl.appendChild(btn);
       });
@@ -4384,6 +4441,9 @@
           if (left <= 0) {
             clearInterval(freezeTimerInterval);
             freezeCountdownEl.textContent = "00:00";
+            if (latestMatchData?.players?.[currentPlayerId]) {
+              latestMatchData.players[currentPlayerId].frozenUntil = 0;
+            }
             animateOverlayOut(freezeOverlay, () => {
               flushPostOverlayNotifications();
             });
