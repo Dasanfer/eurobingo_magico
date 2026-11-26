@@ -2296,16 +2296,20 @@
       return neutralSet;
     }
 
-    function countCompletedLinesForPlayer(pid, cols, rows, matchData = null) {
+    function countCompletedLinesDetailedForPlayer(pid, cols, rows, matchData = null) {
       const activeMatch = matchData || latestMatchData;
-      if (!pid || !activeMatch?.cellClaims) return 0;
+      if (!pid || !activeMatch?.cellClaims) {
+        return { total: 0, horizontal: 0, vertical: 0, diagonal: 0 };
+      }
       const neutralSet = getNeutralCellIndicesSet(activeMatch);
       const ownedSet = new Set(
         Object.entries(activeMatch.cellClaims)
           .filter(([idxKey, c]) => c && c.playerId === pid && !neutralSet.has(Number(idxKey)))
           .map(([idxKey]) => Number(idxKey))
       );
-      let lines = 0;
+      let horizontal = 0;
+      let vertical = 0;
+      let diagonal = 0;
 
       for (let r = 0; r < rows; r++) {
         let rowComplete = true;
@@ -2316,7 +2320,7 @@
             break;
           }
         }
-        if (rowComplete) lines++;
+        if (rowComplete) horizontal++;
       }
 
       for (let c = 0; c < cols; c++) {
@@ -2328,7 +2332,7 @@
             break;
           }
         }
-        if (colComplete) lines++;
+        if (colComplete) vertical++;
       }
 
       if (cols === rows) {
@@ -2340,11 +2344,20 @@
           if (neutralSet.has(idx1) || !ownedSet.has(idx1)) diag1 = false;
           if (neutralSet.has(idx2) || !ownedSet.has(idx2)) diag2 = false;
         }
-        if (diag1) lines++;
-        if (diag2) lines++;
+        if (diag1) diagonal++;
+        if (diag2) diagonal++;
       }
 
-      return lines;
+      return {
+        total: horizontal + vertical + diagonal,
+        horizontal,
+        vertical,
+        diagonal
+      };
+    }
+
+    function countCompletedLinesForPlayer(pid, cols, rows, matchData = null) {
+      return countCompletedLinesDetailedForPlayer(pid, cols, rows, matchData).total;
     }
 
     function computeWizardPoints(playerData, matchData = latestMatchData, playerId = null) {
@@ -2366,12 +2379,19 @@
         currentClaimedCount
       );
       const { cols, rows } = getGridDimensions(activeMatch);
-      const currentLines = pid ? countCompletedLinesForPlayer(pid, cols, rows, activeMatch) : 0;
+      const lineDetails = pid
+        ? countCompletedLinesDetailedForPlayer(pid, cols, rows, activeMatch)
+        : { total: 0, horizontal: 0, vertical: 0, diagonal: 0 };
+      const currentLines = lineDetails.total;
       const linesEver = Math.max(
         typeof playerData.linesEverCount === "number" ? playerData.linesEverCount : 0,
         currentLines
       );
-      return conqueredEver * 1 + currentClaimedCount * 2 + linesEver * 3 + currentLines * 4;
+      const isTruelo = isMatchTruelo(activeMatch);
+      const verticalBonus = isTruelo
+        ? lineDetails.vertical * 5 + lineDetails.vertical * 6
+        : 0;
+      return conqueredEver * 1 + currentClaimedCount * 2 + linesEver * 3 + currentLines * 4 + verticalBonus;
     }
 
     function showArcaneLineBanner(playerName, color) {
