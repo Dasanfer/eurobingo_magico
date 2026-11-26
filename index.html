@@ -1,0 +1,3546 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" /><link rel="stylesheet" href="styles.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>EuroBingo Magico</title>
+  <style>
+    #freeze-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      color: #f0f9ff;
+      user-select: none;
+      pointer-events: auto;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 42%, rgba(186, 230, 253, 0.34) 0%, rgba(14, 116, 144, 0.56) 52%, rgba(8, 47, 73, 0.84) 100%),
+        linear-gradient(160deg, rgba(224, 242, 254, 0.24), rgba(2, 132, 199, 0.42));
+      backdrop-filter: blur(11px) saturate(145%) brightness(1.06);
+      -webkit-backdrop-filter: blur(11px) saturate(145%) brightness(1.06);
+      box-shadow:
+        inset 0 0 90px rgba(186, 230, 253, 0.55),
+        inset 0 0 24px rgba(255, 255, 255, 0.45);
+      opacity: 0;
+      transition: opacity 0.45s ease;
+    }
+
+    #freeze-overlay.active {
+      display: flex;
+      opacity: 1;
+      animation: freezeOverlayEnter 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    #freeze-overlay.overlay-exiting {
+      display: flex;
+      opacity: 0;
+      pointer-events: none;
+      animation: freezeOverlayExit 0.6s ease forwards;
+    }
+
+    @keyframes freezeOverlayEnter {
+      0% {
+        opacity: 0;
+        backdrop-filter: blur(0px) brightness(1);
+      }
+      100% {
+        opacity: 1;
+        backdrop-filter: blur(11px) saturate(145%) brightness(1.06);
+      }
+    }
+
+    @keyframes freezeOverlayExit {
+      0% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+      }
+    }
+
+    .freeze-ice-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+
+    .freeze-frost-vignette {
+      position: absolute;
+      inset: -12px;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(224, 242, 254, 0.55) 0%, transparent 34%),
+        radial-gradient(circle at 100% 0%, rgba(186, 230, 253, 0.5) 0%, transparent 34%),
+        radial-gradient(circle at 0% 100%, rgba(186, 230, 253, 0.52) 0%, transparent 36%),
+        radial-gradient(circle at 100% 100%, rgba(224, 242, 254, 0.55) 0%, transparent 36%),
+        repeating-linear-gradient(
+          -42deg,
+          rgba(255, 255, 255, 0.06) 0px,
+          rgba(255, 255, 255, 0.06) 2px,
+          transparent 2px,
+          transparent 18px
+        );
+      mix-blend-mode: screen;
+    }
+
+    .freeze-ice-flake {
+      position: absolute;
+      top: -20px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #ffffff 0%, #bae6fd 65%, rgba(125, 211, 252, 0.25) 100%);
+      box-shadow: 0 0 8px rgba(224, 242, 254, 0.9);
+      opacity: 0.85;
+      animation: freezeFlakeFall var(--fzdur, 5s) linear var(--fzdelay, 0s) infinite;
+    }
+
+    @keyframes freezeFlakeFall {
+      0% {
+        transform: translate3d(0, -16px, 0) rotate(0deg) scale(0.85);
+        opacity: 0;
+      }
+      15% {
+        opacity: 0.92;
+      }
+      85% {
+        opacity: 0.85;
+      }
+      100% {
+        transform: translate3d(var(--fzdrift, 18px), calc(100vh + 32px), 0) rotate(220deg) scale(1.05);
+        opacity: 0;
+      }
+    }
+
+    .freeze-crystal-shard {
+      position: absolute;
+      width: 22px;
+      height: 68px;
+      clip-path: polygon(50% 0%, 100% 24%, 76% 100%, 24% 100%, 0% 24%);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(125, 211, 252, 0.36) 65%, rgba(2, 132, 199, 0.22) 100%);
+      border: 1px solid rgba(224, 242, 254, 0.65);
+      box-shadow: 0 0 16px rgba(125, 211, 252, 0.45);
+      animation: freezeShardPulse 3.6s ease-in-out infinite;
+    }
+
+    @keyframes freezeShardPulse {
+      0%, 100% {
+        opacity: 0.55;
+        filter: brightness(0.95);
+      }
+      50% {
+        opacity: 0.9;
+        filter: brightness(1.22);
+      }
+    }
+
+    #freeze-overlay h2,
+    #freeze-countdown,
+    #freeze-overlay p {
+      position: relative;
+      z-index: 1;
+    }
+
+    #freeze-overlay h2 {
+      margin: 0 0 14px;
+      font-size: clamp(1.55rem, 4.5vw, 2.5rem);
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      color: #e0f2fe;
+      text-shadow:
+        0 0 18px rgba(125, 211, 252, 0.95),
+        0 2px 10px rgba(3, 105, 161, 0.85);
+    }
+
+    #freeze-countdown {
+      font-variant-numeric: tabular-nums;
+      font-size: clamp(3.2rem, 12vw, 6rem);
+      font-weight: 900;
+      line-height: 1;
+      padding: 18px 34px;
+      margin: 6px 0 18px;
+      border-radius: 22px;
+      color: #ffffff;
+      background: linear-gradient(145deg, rgba(186, 230, 253, 0.28), rgba(7, 89, 133, 0.58));
+      border: 2px solid rgba(224, 242, 254, 0.82);
+      box-shadow:
+        0 0 36px rgba(125, 211, 252, 0.65),
+        inset 0 0 22px rgba(255, 255, 255, 0.35);
+      text-shadow: 0 0 22px rgba(186, 230, 253, 0.95);
+    }
+
+    #freeze-overlay p {
+      margin: 0;
+      max-width: 440px;
+      font-size: clamp(0.98rem, 2.8vw, 1.2rem);
+      color: #e0f2fe;
+      text-shadow: 0 1px 8px rgba(8, 47, 73, 0.9);
+    }
+
+    .player-pill.is-frozen {
+      position: relative;
+      overflow: hidden;
+      border-color: rgba(186, 230, 253, 0.92) !important;
+      background:
+        linear-gradient(155deg, rgba(224, 242, 254, 0.34), rgba(14, 116, 144, 0.62) 55%, rgba(8, 47, 73, 0.84) 100%) !important;
+      box-shadow:
+        0 0 18px rgba(125, 211, 252, 0.65),
+        inset 0 0 14px rgba(255, 255, 255, 0.42),
+        inset 0 0 24px rgba(56, 189, 248, 0.35) !important;
+    }
+
+    .player-pill.is-frozen::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      background:
+        radial-gradient(circle at 12% 16%, rgba(255, 255, 255, 0.45) 0%, transparent 38%),
+        radial-gradient(circle at 88% 84%, rgba(186, 230, 253, 0.38) 0%, transparent 42%),
+        repeating-linear-gradient(
+          -38deg,
+          rgba(255, 255, 255, 0.08) 0px,
+          rgba(255, 255, 255, 0.08) 2px,
+          transparent 2px,
+          transparent 11px
+        );
+      animation: frozenPillShimmer 2.8s ease-in-out infinite;
+    }
+
+    @keyframes frozenPillShimmer {
+      0%, 100% {
+        opacity: 0.72;
+      }
+      50% {
+        opacity: 1;
+      }
+    }
+
+    .player-pill.is-frozen .player-score {
+      position: relative;
+      z-index: 2;
+      color: #f0f9ff !important;
+      background: linear-gradient(145deg, rgba(186, 230, 253, 0.38), rgba(2, 132, 199, 0.68)) !important;
+      border: 1px solid rgba(224, 242, 254, 0.9) !important;
+      border-radius: 999px;
+      padding: 2px 9px;
+      text-shadow:
+        0 0 10px rgba(125, 211, 252, 0.95),
+        0 1px 4px rgba(8, 47, 73, 0.9);
+      box-shadow:
+        0 0 12px rgba(125, 211, 252, 0.65),
+        inset 0 0 8px rgba(255, 255, 255, 0.45);
+    }
+
+    .frozen-score-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      margin-left: 5px;
+      font-size: 0.78em;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      color: #e0f2fe;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PANTALLA 1: REGISTRO DEL MAGO -->
+  <section id="login-screen">
+    <div class="magic-crest" aria-hidden="true"></div>
+    <h1>EuroBingo Magico</h1>
+    <p>Invoca tu nombre de mago para entrar en el sorteo aleatorio de duelo o truelo eurovisivo.</p>
+    <div class="login-card">
+      <input
+        type="text"
+        id="wizard-name-input"
+        placeholder="Ej. Merlin de Malmo..."
+        maxlength="22"
+        autocomplete="off"
+      />
+      <button id="start-duel-btn">Entrar al Torneo</button>
+      <div id="login-status">Preparando grimorio en Firestore...</div>
+    </div>
+  </section>
+
+  <!-- PANTALLA 2: TABLERO DEL BINGO -->
+  <div id="game-screen">
+    <header>
+      <div class="scoreboard" id="scoreboard"></div>
+    </header>
+
+    <main>
+      <div class="main-magic-overlay" id="main-magic-overlay" aria-hidden="true">
+        <svg class="astro-constellation-svg" viewBox="0 0 400 600" preserveAspectRatio="none">
+          <polyline points="42,88 108,52 176,94 238,64" fill="none" stroke="rgba(186,230,253,0.45)" stroke-width="1" stroke-dasharray="3 3" />
+          <polyline points="265,125 334,92 365,158 312,196 265,125" fill="none" stroke="rgba(230,190,106,0.42)" stroke-width="1" />
+          <polyline points="48,430 116,472 172,442 224,518 296,492 356,534" fill="none" stroke="rgba(132,221,210,0.44)" stroke-width="1" stroke-dasharray="4 3" />
+          <line x1="176" y1="94" x2="265" y2="125" stroke="rgba(186,230,253,0.25)" stroke-width="0.8" />
+          <line x1="116" y1="472" x2="172" y2="442" stroke="rgba(253,224,71,0.28)" stroke-width="0.8" />
+        </svg>
+        <div class="astro-ring-outer"></div>
+        <div class="astro-ring-mid"></div>
+        <div class="astro-ring-inner"></div>
+        <div class="astro-ring-core"></div>
+      </div>
+      <div class="main-player-fx-layer" id="main-player-fx-layer" aria-hidden="true"></div>
+      <div class="bingo-grid" id="bingo-grid"></div>
+    </main>
+
+    <footer class="elemental-footer" aria-label="Recarga de magias elementales">
+      <div class="elemental-bars-grid">
+        <div class="element-rune-bar el-fire is-ready" id="bar-fire" title="Fuego">
+          <div class="element-rune-fill" id="fill-fire" style="width: 100%;"></div>
+        </div>
+        <div class="element-rune-bar el-water is-ready" id="bar-water" title="Agua">
+          <div class="element-rune-fill" id="fill-water" style="width: 100%;"></div>
+        </div>
+        <div class="element-rune-bar el-air is-ready" id="bar-air" title="Aire">
+          <div class="element-rune-fill" id="fill-air" style="width: 100%;"></div>
+        </div>
+        <div class="element-rune-bar el-earth is-ready" id="bar-earth" title="Tierra">
+          <div class="element-rune-fill" id="fill-earth" style="width: 100%;"></div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- MODAL LIBRO DE HECHIZOS -->
+  <div class="spell-modal-backdrop" id="spell-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="spell-modal-title">
+    <div class="spell-modal">
+      <div class="spell-modal-header">
+        <h2 id="spell-modal-title">Grimorio de Hechizos</h2>
+      </div>
+      <div class="spell-cell-preview" id="spell-cell-preview"></div>
+
+      <div id="arcane-section">
+        <div class="spell-section-title">Magia Arcana</div>
+        <div class="spell-item" id="arcane-spell-item">
+          <button type="button" class="spell-btn" id="btn-arcane-spell">Conquistar Casilla</button>
+          <div class="spell-desc" id="arcane-spell-desc">Reclama esta casilla libre con tu color arcano. Una casilla conquistada nunca podra ser conquistada por otro mago rival.</div>
+        </div>
+      </div>
+
+      <div id="elemental-section">
+        <div class="spell-section-title">Hechizos elementales</div>
+
+        <div class="spell-item" id="water-spell-item">
+          <button type="button" class="spell-btn" id="btn-water-spell">Agua - Congelar Rival</button>
+          <div class="spell-desc">Congela al otro mago durante 1:30 minutos con cuenta atras bloqueando su pantalla.</div>
+        </div>
+
+        <div class="spell-item" id="air-spell-item">
+          <button type="button" class="spell-btn" id="btn-air-spell">Aire - Mover Celda</button>
+          <div class="spell-desc">Permite mover arrastrando o intercambiando esta celda por otra (incluidas conquistadas por otro equipo, nunca de tierra ni blindadas con metal).</div>
+        </div>
+
+        <div class="spell-item" id="earth-spell-item">
+          <button type="button" class="spell-btn" id="btn-earth-spell">Tierra - Bloquear Casilla</button>
+          <div class="spell-desc">Bloquea esta casilla durante 3 minutos para que nadie pueda cambiarla ni moverla.</div>
+        </div>
+
+        <div class="spell-item" id="fire-spell-item">
+          <button type="button" class="spell-btn" id="btn-fire-spell">Fuego - Disipar Conquista</button>
+          <div class="spell-desc">Solo disponible en casillas conquistadas por otro jugador; elimina su conquista y la deja libre.</div>
+        </div>
+      </div>
+
+      <div class="combine-elements-box" id="combine-elements-box">
+        <button type="button" class="combine-elements-btn" id="btn-combine-elements">Combinar elementos</button>
+        <div class="combine-elements-hint" id="combine-elements-hint">Desbloquea combinaciones elementales en la mesa arcana.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL MESA ARCANA CON CIRCULO DE ESTRELLA DE DAVID (COMBINAR ELEMENTOS) -->
+  <div class="fusion-table-backdrop" id="fusion-table-backdrop" role="dialog" aria-modal="true" aria-labelledby="fusion-table-title">
+    <div class="fusion-table-roll" id="fusion-table-roll">
+      <div class="fusion-table-header">
+        <h2 class="fusion-table-title" id="fusion-table-title">Mesa Arcana · Combinar elementos</h2>
+        <button type="button" class="fusion-close-btn" id="btn-close-fusion-table" aria-label="Cerrar mesa arcana">&times;</button>
+      </div>
+      <div class="fusion-arcane-arena">
+        <div class="star-of-david-circle">
+          <svg class="star-of-david-svg" viewBox="0 0 200 200" aria-hidden="true">
+            <circle cx="100" cy="100" r="94" fill="none" stroke="#e6be6a" stroke-width="1.6" />
+            <circle cx="100" cy="100" r="88" fill="none" stroke="#b88946" stroke-width="0.9" stroke-dasharray="4 3" />
+            <polygon points="100,14 174,142 26,142" fill="none" stroke="#f3d28b" stroke-width="2.2" />
+            <polygon points="100,186 26,58 174,58" fill="none" stroke="#f3d28b" stroke-width="2.2" />
+          </svg>
+          <div class="fusion-spells-list" id="fusion-spells-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OVERLAY TEMATIZADO DE HECHIZOS -->
+  <div id="cast-shake-overlay" aria-live="assertive">
+    <div class="theme-fx-layer" id="theme-fx-layer" aria-hidden="true"></div>
+    <div class="arcane-glass-veil" id="arcane-glass-veil" aria-hidden="true"></div>
+    <div class="cast-shake-panel">
+      <div class="cast-rune-glyphs" id="cast-rune-glyphs">✦ ✧ ✦</div>
+      <div class="cast-shake-title" id="cast-shake-title">Invocacion</div>
+      <div class="cast-shake-prompt" id="cast-shake-prompt">Agita para lanzar el hechizo</div>
+      <button type="button" class="cast-fallback-btn" id="cast-fallback-btn">Lanzar Hechizo</button>
+    </div>
+  </div>
+
+  <!-- OVERLAY DE SELECCION DE CONGELACION (ESTILO AGUA, HIELO Y NIEVE) -->
+  <div id="water-target-overlay" aria-live="assertive">
+    <div class="water-target-fx-layer" id="water-target-fx-layer" aria-hidden="true"></div>
+    <div class="water-target-card">
+      <div class="cast-rune-glyphs" style="color:#bae6fd;text-shadow:0 0 18px rgba(125,211,252,0.9);">❄ 💧 ❄</div>
+      <div class="water-target-title">Hechizo de Agua</div>
+      <div class="water-target-message">Elige a que mago rival quieres congelar durante 1:30 minutos:</div>
+      <div class="water-target-list" id="water-target-list"></div>
+    </div>
+  </div>
+
+  <!-- OVERLAY DE POCION MAGICA -->
+  <div id="potion-overlay" aria-live="assertive">
+    <div class="potion-bg-bubbles" id="potion-bg-bubbles" aria-hidden="true"></div>
+    <div class="potion-card">
+      <div class="potion-flask" aria-hidden="true">
+        <span class="potion-bubble"></span>
+        <span class="potion-bubble"></span>
+        <span class="potion-bubble"></span>
+        <span class="potion-bubble"></span>
+      </div>
+      <div class="potion-title" id="potion-title">Pocion Arcana</div>
+      <div class="potion-message" id="potion-message"></div>
+      <div class="potion-targets" id="potion-targets"></div>
+      <button type="button" class="potion-continue-btn" id="potion-continue-btn">Continuar</button>
+    </div>
+  </div>
+
+  <!-- OVERLAY DE CONGELACION (HECHIZO AGUA) -->
+  <div id="freeze-overlay" aria-live="polite" aria-modal="true" role="dialog">
+    <div class="freeze-ice-layer" id="freeze-ice-layer" aria-hidden="true"></div>
+    <h2>Has sido congelado por Agua</h2>
+    <div id="freeze-countdown">01:30</div>
+    <p>Tu pantalla esta bloqueada hasta que se agote el hechizo.</p>
+  </div>
+
+  <!-- FIREBASE & LOGICA DE JUEGO -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      doc,
+      getDocs,
+      setDoc,
+      updateDoc,
+      onSnapshot,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD6DclLqigQcM9Xgw2CSoOECvQAICjgDUs",
+      authDomain: "eurobingo-magico.firebaseapp.com",
+      projectId: "eurobingo-magico",
+      storageBucket: "eurobingo-magico.firebasestorage.app",
+      messagingSenderId: "77204318062",
+      appId: "1:77204318062:web:24d918ae53edc9dc03037f"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const EUROVISION_EVENTS_32 = [
+      "Fuego o pirotecnia en el escenario",
+      "Cambio de vestuario en directo",
+      "Nota aguda interminable (+8 seg)",
+      "Guino directo a la camara",
+      "Ventilador epico moviendo el pelo",
+      "Presentador hace chiste incomodo",
+      "Traje con brillos o lentejuelas",
+      "Idioma inventado o frase en espanol",
+      "Bailarines sin camiseta",
+      "Instrumento tradicional / folklorico",
+      "Balada dramatica bajo lluvia falsa",
+      "Problemas tecnicos o de sonido",
+      "12 puntos para el pais vecino",
+      "Corazon con las manos a camara",
+      "Vestuario completamente blanco",
+      "Grito de Thank you Europe",
+      "Acrobacia o voltereta imposible",
+      "Camara girando 360 grados sin parar",
+      "Banderas LGBT+ en primera fila",
+      "Cancion con ritmo techno / rave",
+      "Cantante descalzo/a en escena",
+      "Humo denso cubriendo el suelo",
+      "Abucheos o silbidos del publico",
+      "Votacion con portavoz excentrico",
+      "Final con caida al suelo dramatica",
+      "Gafas de sol en interior",
+      "Silencio dramatico antes del estribillo",
+      "Coreografia sincronizada robotica",
+      "Referencia a la paz o al amor",
+      "Publico cantando a capella",
+      "Vestido gigante o con cola infinita",
+      "Rostro en pantalla gigante LED"
+    ];
+
+    const TEST_WIZARDS = [
+      { id: "bot_morgana", name: "Morgana Glitter" },
+      { id: "bot_gandalf", name: "Gandalf del Televoto" },
+      { id: "bot_circe", name: "Circe Synthpop" },
+      { id: "bot_merlin", name: "Merlin Douze Points" },
+      { id: "bot_zelda", name: "Zelda Pirotecnia" },
+      { id: "bot_draco", name: "Draco Balada" },
+      { id: "bot_freya", name: "Freya Ventilador" }
+    ];
+
+    const ARCANE_COLORS = ["azul", "morado", "naranja"];
+    const ARCANE_COOLDOWN_MS = 15000;
+    const ELEMENTAL_KEYS = ["fire", "water", "air", "earth"];
+    const ELEMENT_DISPLAY_NAMES = { fire: "Fuego", water: "Agua", air: "Aire", earth: "Tierra" };
+    const DEVICE_STORAGE_KEY = "eurobingo_magico_device_v1";
+
+    let currentPlayerId = null;
+    let currentMatchId = null;
+    let unsubscribeMatch = null;
+    let latestMatchData = null;
+    let hasReceivedInitialMatchSnapshot = false;
+    let selectedSpellCellIndex = null;
+    let freezeTimerInterval = null;
+    let earthTimerInterval = null;
+    let arcaneChargeInterval = null;
+    let handledSpellCastEventId = null;
+    let handledLineEventId = null;
+    let deferredLineEvent = null;
+    let deferredChargedElements = [];
+    let pendingSpellAction = null;
+    let pendingWaterTargetIds = null;
+    let shakeFallbackTimeout = null;
+    let motionShakeHandler = null;
+    let isCastingTriggered = false;
+    let orbSpawnTimeout = null;
+    let orbDespawnTimeout = null;
+    let activeMagicOrbEl = null;
+
+    // Estado limpio del nuevo sistema de Aire/Viento
+    let airSourceCellIndex = null;
+
+    // Estado limpio del nuevo sistema de Pocion/Bebida
+    let senderPotionTimeout = null;
+    let receiverContinueTimeout = null;
+    let handledPotionRequestId = null;
+
+    const animatedCellIndices = new Set();
+    const arcaneConquestCellIndices = new Set();
+    const fireBurnCellIndices = new Set();
+    const expiredEarthKeys = new Set();
+    const lastKnownElementCharges = { fire: 3, water: 3, air: 3, earth: 3 };
+
+    // Conjunto de celdas intercambiadas para efectos visuales de Viento/Aire
+    const airBlinkCellIndices = new Map();
+
+    // Celdas de hechizos/magia que deben animarse al cerrar los overlays (hechizo o beber)
+    const pendingPostOverlaySpellCells = new Set();
+
+    let mainPlayerFxTicker = null;
+    let lastMainFxSignature = "";
+
+    const $ = (id) => document.getElementById(id);
+    const loginScreen = $("login-screen");
+    const gameScreen = $("game-screen");
+    const nameInput = $("wizard-name-input");
+    const startBtn = $("start-duel-btn");
+    const loginStatus = $("login-status");
+    const scoreboardEl = $("scoreboard");
+    const bingoGridEl = $("bingo-grid");
+    const mainMagicOverlay = $("main-magic-overlay");
+    const mainPlayerFxLayer = $("main-player-fx-layer");
+
+    const spellModalBackdrop = $("spell-modal-backdrop");
+    const spellCellPreview = $("spell-cell-preview");
+    const btnArcaneSpell = $("btn-arcane-spell");
+    const arcaneSpellItem = $("arcane-spell-item");
+    const arcaneSpellDesc = $("arcane-spell-desc");
+    const btnWaterSpell = $("btn-water-spell");
+    const waterSpellItem = $("water-spell-item");
+    const btnAirSpell = $("btn-air-spell");
+    const airSpellItem = $("air-spell-item");
+    const btnEarthSpell = $("btn-earth-spell");
+    const earthSpellItem = $("earth-spell-item");
+    const btnFireSpell = $("btn-fire-spell");
+    const fireSpellItem = $("fire-spell-item");
+    const combineElementsBox = $("combine-elements-box");
+    const btnCombineElements = $("btn-combine-elements");
+    const combineElementsHint = $("combine-elements-hint");
+    const fusionTableBackdrop = $("fusion-table-backdrop");
+    const fusionTableRoll = $("fusion-table-roll");
+    const btnCloseFusionTable = $("btn-close-fusion-table");
+    const fusionSpellsList = $("fusion-spells-list");
+
+    const metalMeltCellIndices = new Set();
+    let shortCircuitInterval = null;
+
+    const ELEMENT_COMBINATIONS = [
+      {
+        id: "plant",
+        pair: ["earth", "water"],
+        elementLabel: "Planta",
+        spellName: "Germinar",
+        themeClass: "theme-fusion-plant",
+        glyphs: "🌿 🌱 🌿",
+        description: "Germina esta casilla vacia (+25% velocidad de recarga arcana mientras tengas al menos una celda germinada)."
+      },
+      {
+        id: "metal",
+        pair: ["earth", "fire"],
+        elementLabel: "Metal",
+        spellName: "Blindaje",
+        themeClass: "theme-fusion-metal",
+        glyphs: "⚙ 🛡 ⚙",
+        description: "Blinda una casilla conquistada por ti impidiendo cualquier intercambio hasta que reciba un hechizo de fuego."
+      },
+      {
+        id: "lightning",
+        pair: ["air", "fire"],
+        elementLabel: "Rayo",
+        spellName: "Cortocircuito",
+        themeClass: "theme-fusion-lightning",
+        glyphs: "✦ ✧ ✦",
+        description: "Descarga una barra elemental rival (priorizando las del 100%) y la bloquea durante 45 segundos."
+      },
+      {
+        id: "mist",
+        pair: ["air", "water"],
+        elementLabel: "Niebla",
+        spellName: "Velo de las Sombras",
+        themeClass: "theme-fusion-mist",
+        glyphs: "✦ ✧ ✦",
+        description: "Envuelve en sombras a todos los rivales aumentando un 30% el tiempo de recarga de su barra arcana."
+      }
+    ];
+
+    function getUnlockedHybridSpells(playerData) {
+      const charges = getPlayerElementCharges(playerData);
+      const fullElements = new Set(ELEMENTAL_KEYS.filter((k) => charges[k] >= 3));
+      return ELEMENT_COMBINATIONS.filter((combo) => fullElements.has(combo.pair[0]) && fullElements.has(combo.pair[1]));
+    }
+
+    function getActivePlantCell(matchData, cellIndex) {
+      const plant = matchData?.plantCells?.[String(cellIndex)];
+      return plant?.playerId ? plant : null;
+    }
+
+    function getActiveMetalArmor(matchData, cellIndex) {
+      const armor = matchData?.metalArmors?.[String(cellIndex)];
+      return armor?.playerId ? armor : null;
+    }
+
+    function playerHasActivePlantCell(matchData, playerId) {
+      const plants = matchData?.plantCells || {};
+      return Object.values(plants).some((p) => p && p.playerId === playerId);
+    }
+
+    function isShadowVeilActiveForPlayer(playerData) {
+      return typeof playerData?.shadowVeilUntil === "number" && playerData.shadowVeilUntil > Date.now();
+    }
+
+    function isElementShortCircuited(playerData, elementKey) {
+      const until = playerData?.shortCircuitUntil?.[elementKey];
+      return typeof until === "number" && until > Date.now();
+    }
+
+    function hasAnyShortCircuitActive(playerData) {
+      if (!playerData) return false;
+      return ELEMENTAL_KEYS.some((el) => isElementShortCircuited(playerData, el));
+    }
+
+    function syncMainPlayerBackgroundEffects(matchData = latestMatchData) {
+      if (!mainPlayerFxLayer || !currentPlayerId) return;
+      const myPlayer = matchData?.players?.[currentPlayerId];
+      if (!myPlayer) {
+        if (lastMainFxSignature !== "") {
+          mainPlayerFxLayer.innerHTML = "";
+          lastMainFxSignature = "";
+        }
+        return;
+      }
+
+      const hasPlant = playerHasActivePlantCell(matchData, currentPlayerId);
+      const hasShadow = isShadowVeilActiveForPlayer(myPlayer);
+      const hasLightning = hasAnyShortCircuitActive(myPlayer);
+      const sig = `${hasPlant ? 1 : 0}|${hasShadow ? 1 : 0}|${hasLightning ? 1 : 0}`;
+
+      if (sig === lastMainFxSignature) return;
+      lastMainFxSignature = sig;
+      mainPlayerFxLayer.innerHTML = "";
+
+      if (hasPlant) {
+        const plantBg = document.createElement("div");
+        plantBg.className = "main-plant-spores-bg";
+        const travelPx = Math.max(260, Math.round((mainPlayerFxLayer.clientHeight || window.innerHeight * 0.72) + 40));
+        for (let i = 0; i < 18; i++) {
+          const sp = document.createElement("span");
+          sp.className = "main-green-spore";
+          sp.style.left = `${5 + ((i * 5.4) % 90)}%`;
+          sp.style.setProperty("--mspsz", `${5 + (i % 3) * 2.5}px`);
+          sp.style.setProperty("--mspx", `${(i % 2 === 0 ? 1 : -1) * (10 + (i % 3) * 8)}px`);
+          sp.style.setProperty("--msptravel", `${travelPx}px`);
+          sp.style.setProperty("--mspdur", `${3.6 + (i % 4) * 0.75}s`);
+          sp.style.setProperty("--mspdelay", `${(i % 6) * -0.65}s`);
+          plantBg.appendChild(sp);
+        }
+        mainPlayerFxLayer.appendChild(plantBg);
+      }
+
+      if (hasShadow) {
+        const shadowBg = document.createElement("div");
+        shadowBg.className = "main-shadow-veil-bg";
+        const wispConfigs = [
+          { left: "6%", top: "12%", w: "220px", h: "160px", dx: "26px", dy: "-14px", dur: "7.2s", delay: "0s" },
+          { left: "58%", top: "18%", w: "250px", h: "170px", dx: "-24px", dy: "16px", dur: "8.4s", delay: "-2.1s" },
+          { left: "14%", top: "58%", w: "240px", h: "180px", dx: "22px", dy: "-18px", dur: "7.8s", delay: "-3.6s" },
+          { left: "54%", top: "56%", w: "230px", h: "175px", dx: "-28px", dy: "-12px", dur: "9.0s", delay: "-1.4s" }
+        ];
+        wispConfigs.forEach((wc) => {
+          const wisp = document.createElement("span");
+          wisp.className = "main-shadow-mist-wisp";
+          wisp.style.left = wc.left;
+          wisp.style.top = wc.top;
+          wisp.style.width = wc.w;
+          wisp.style.height = wc.h;
+          wisp.style.setProperty("--mwispx", wc.dx);
+          wisp.style.setProperty("--mwispy", wc.dy);
+          wisp.style.setProperty("--mwispdur", wc.dur);
+          wisp.style.setProperty("--mwispdelay", wc.delay);
+          shadowBg.appendChild(wisp);
+        });
+        mainPlayerFxLayer.appendChild(shadowBg);
+      }
+
+      if (hasLightning) {
+        const shockBg = document.createElement("div");
+        shockBg.className = "main-lightning-shock-bg";
+
+        const borderFrame = document.createElement("div");
+        borderFrame.className = "main-electric-border-frame";
+        shockBg.appendChild(borderFrame);
+
+        for (let i = 0; i < 12; i++) {
+          const bolt = document.createElement("span");
+          bolt.className = "main-electric-arc-bolt";
+          bolt.style.left = `${6 + ((i * 8.1) % 88)}%`;
+          bolt.style.top = `${4 + ((i * 19) % 68)}%`;
+          bolt.style.setProperty("--mbw", `${2 + (i % 2) * 1.2}px`);
+          bolt.style.setProperty("--mbh", `${95 + (i % 4) * 32}px`);
+          bolt.style.setProperty("--mbrot", `${(i % 2 === 0 ? 1 : -1) * (12 + (i % 4) * 9)}deg`);
+          bolt.style.setProperty("--mbdur", `${1.2 + (i % 3) * 0.35}s`);
+          bolt.style.setProperty("--mbdelay", `${i * -0.22}s`);
+          shockBg.appendChild(bolt);
+        }
+        mainPlayerFxLayer.appendChild(shockBg);
+      }
+    }
+
+    function ensureMainPlayerFxTicker() {
+      if (mainPlayerFxTicker) return;
+      mainPlayerFxTicker = setInterval(() => {
+        syncMainPlayerBackgroundEffects(latestMatchData);
+      }, 600);
+    }
+
+    function getArcaneCooldownDurationForPlayer(matchData, playerId) {
+      const activeMatch = matchData || latestMatchData;
+      const playerData = activeMatch?.players?.[playerId];
+      let duration = ARCANE_COOLDOWN_MS;
+      if (playerHasActivePlantCell(activeMatch, playerId)) {
+        duration = duration / 1.25;
+      }
+      if (isShadowVeilActiveForPlayer(playerData)) {
+        duration = duration * 1.3;
+      }
+      return Math.round(duration);
+    }
+
+    const castShakeOverlay = $("cast-shake-overlay");
+    const themeFxLayer = $("theme-fx-layer");
+    const arcaneGlassVeil = $("arcane-glass-veil");
+    const castRuneGlyphsEl = $("cast-rune-glyphs");
+    const castShakeTitleEl = $("cast-shake-title");
+    const castShakePromptEl = $("cast-shake-prompt");
+    const castFallbackBtn = $("cast-fallback-btn");
+
+    const waterTargetOverlay = $("water-target-overlay");
+    const waterTargetFxLayer = $("water-target-fx-layer");
+    const waterTargetListEl = $("water-target-list");
+
+    const potionOverlay = $("potion-overlay");
+    const potionBgBubbles = $("potion-bg-bubbles");
+    const potionTitleEl = $("potion-title");
+    const potionMessageEl = $("potion-message");
+    const potionTargetsEl = $("potion-targets");
+    const potionContinueBtn = $("potion-continue-btn");
+
+    const freezeOverlay = $("freeze-overlay");
+    const freezeIceLayer = $("freeze-ice-layer");
+    const freezeCountdownEl = $("freeze-countdown");
+
+    const OVERLAY_EXIT_MS = 620;
+    const overlayExitTimers = new WeakMap();
+
+    function animateOverlayOut(overlayEl, onDone) {
+      if (!overlayEl) {
+        if (typeof onDone === "function") onDone();
+        return;
+      }
+      const prevTimer = overlayExitTimers.get(overlayEl);
+      if (prevTimer) {
+        clearTimeout(prevTimer);
+        overlayExitTimers.delete(overlayEl);
+      }
+
+      const wasVisible = overlayEl.classList.contains("active");
+      if (!wasVisible) {
+        overlayEl.classList.remove("active", "overlay-exiting", "casting-burst");
+        if (typeof onDone === "function") onDone();
+        return;
+      }
+
+      overlayEl.classList.remove("active");
+      overlayEl.classList.add("overlay-exiting");
+
+      const timer = setTimeout(() => {
+        overlayExitTimers.delete(overlayEl);
+        overlayEl.classList.remove("overlay-exiting", "casting-burst");
+        if (typeof onDone === "function") onDone();
+      }, OVERLAY_EXIT_MS);
+
+      overlayExitTimers.set(overlayEl, timer);
+    }
+
+    function cancelOverlayExit(overlayEl) {
+      if (!overlayEl) return;
+      const prevTimer = overlayExitTimers.get(overlayEl);
+      if (prevTimer) {
+        clearTimeout(prevTimer);
+        overlayExitTimers.delete(overlayEl);
+      }
+      overlayEl.classList.remove("overlay-exiting");
+    }
+
+    const createEventId = (prefix) => `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+    const getRivalIds = (matchData) => ((matchData && matchData.participantIds) || []).filter((id) => id !== currentPlayerId);
+
+    function getArcaneChargeRatio(playerData, pid = null, matchData = null) {
+      const readyAt = typeof playerData?.arcaneReadyAt === "number" ? playerData.arcaneReadyAt : 0;
+      if (readyAt <= 0) return 1;
+      const remaining = readyAt - Date.now();
+      if (remaining <= 0) return 1;
+      const activeMatch = matchData || latestMatchData;
+      const hasPlant = pid && activeMatch ? playerHasActivePlantCell(activeMatch, pid) : false;
+      const hasShadow = isShadowVeilActiveForPlayer(playerData);
+      const totalDur = (!hasPlant && !hasShadow && typeof playerData?.arcaneCooldownDuration === "number" && playerData.arcaneCooldownDuration > 0)
+        ? playerData.arcaneCooldownDuration
+        : (pid && activeMatch ? getArcaneCooldownDurationForPlayer(activeMatch, pid) : ARCANE_COOLDOWN_MS);
+      return Math.max(0, Math.min(1, 1 - remaining / totalDur));
+    }
+
+    function isArcaneSpellReady(playerData) {
+      return getArcaneChargeRatio(playerData) >= 1;
+    }
+
+    function updateArcaneScoreMistBars() {
+      if (!latestMatchData?.players) return;
+      const mistEls = scoreboardEl.querySelectorAll(".arcane-mist-progress[data-pid]");
+      let myWasReady = false;
+      mistEls.forEach((el) => {
+        const pid = el.getAttribute("data-pid");
+        const player = latestMatchData.players[pid];
+        if (!player) return;
+        const ratio = getArcaneChargeRatio(player, pid, latestMatchData);
+        const pct = (ratio * 100).toFixed(2);
+        el.style.setProperty("--arcane-pct", `${pct}%`);
+        const ready = ratio >= 1;
+        el.classList.toggle("is-charged", ready);
+        if (pid === currentPlayerId) myWasReady = ready;
+
+        const pill = el.parentElement;
+        if (pill) {
+          const isFrozenNow = isPlayerFrozenNow(player);
+          pill.classList.toggle("is-frozen", isFrozenNow);
+          const scoreEl = pill.querySelector(".player-score");
+          if (scoreEl) {
+            let freezeBadge = scoreEl.querySelector(".frozen-score-badge");
+            if (isFrozenNow && !freezeBadge) {
+              freezeBadge = document.createElement("span");
+              freezeBadge.className = "frozen-score-badge";
+              freezeBadge.textContent = "❄️";
+              freezeBadge.title = "Mago congelado por Agua";
+              scoreEl.appendChild(freezeBadge);
+            } else if (!isFrozenNow && freezeBadge) {
+              freezeBadge.remove();
+            }
+          }
+
+          const hasPlant = playerHasActivePlantCell(latestMatchData, pid);
+          let sporesEl = pill.querySelector(".arcane-green-spores");
+          if (hasPlant && !sporesEl) {
+            sporesEl = document.createElement("div");
+            sporesEl.className = "arcane-green-spores";
+            for (let s = 0; s < 8; s++) {
+              const dot = document.createElement("span");
+              dot.className = "arcane-spore-dot";
+              dot.style.left = `${8 + s * 11.5}%`;
+              dot.style.setProperty("--sx", `${(s % 2 === 0 ? 1 : -1) * 9}px`);
+              dot.style.setProperty("--spdur", `${1.8 + (s % 3) * 0.45}s`);
+              dot.style.setProperty("--spdelay", `${s * -0.28}s`);
+              sporesEl.appendChild(dot);
+            }
+            pill.appendChild(sporesEl);
+          } else if (!hasPlant && sporesEl) {
+            sporesEl.remove();
+          }
+
+          const hasShadow = isShadowVeilActiveForPlayer(player);
+          let shadowEl = pill.querySelector(".arcane-shadow-veil-bar");
+          if (hasShadow && !shadowEl) {
+            shadowEl = document.createElement("div");
+            shadowEl.className = "arcane-shadow-veil-bar";
+            pill.appendChild(shadowEl);
+          } else if (!hasShadow && shadowEl) {
+            shadowEl.remove();
+          }
+        }
+      });
+
+      syncMainPlayerBackgroundEffects(latestMatchData);
+
+      if (spellModalBackdrop.classList.contains("open") && selectedSpellCellIndex !== null && latestMatchData.players[currentPlayerId]) {
+        const claim = latestMatchData.cellClaims?.[String(selectedSpellCellIndex)];
+        const earthLock = getActiveEarthLock(latestMatchData, selectedSpellCellIndex);
+        const isClaimed = Boolean(claim?.playerId);
+        const claimedByMe = claim?.playerId === currentPlayerId;
+        const lockedByAny = Boolean(earthLock?.playerId);
+        const currentlyDisabled = btnArcaneSpell.disabled;
+        const shouldBeAvailable = myWasReady && !isClaimed && !lockedByAny;
+        if (currentlyDisabled === shouldBeAvailable) {
+          setSpellButtonState(btnArcaneSpell, arcaneSpellItem, {
+            used: false,
+            available: shouldBeAvailable
+          });
+          if (!lockedByAny && !claimedByMe) {
+            arcaneSpellDesc.textContent = !myWasReady
+              ? "La magia arcana se esta recargando (15 segundos)..."
+              : claim?.playerId
+                ? "Conquista esta casilla del equipo rival con tu color arcano."
+                : "Reclama esta casilla con tu color arcano.";
+          }
+        }
+      }
+    }
+
+    function ensureArcaneChargeTicker() {
+      if (arcaneChargeInterval) return;
+      arcaneChargeInterval = setInterval(updateArcaneScoreMistBars, 200);
+    }
+
+    function isPlayerFrozenNow(myPlayer) {
+      return typeof myPlayer?.frozenUntil === "number" && myPlayer.frozenUntil - Date.now() > 0;
+    }
+
+    function isAnyBlockingOverlayOpen() {
+      return (
+        potionOverlay.classList.contains("active") ||
+        castShakeOverlay.classList.contains("active") ||
+        waterTargetOverlay.classList.contains("active")
+      );
+    }
+
+    function triggerPostOverlayCellEnterExitAnimations() {
+      if (pendingPostOverlaySpellCells.size === 0 || !latestMatchData) return;
+      const myPlayer = latestMatchData.players?.[currentPlayerId];
+      if (isPlayerFrozenNow(myPlayer) || isAnyBlockingOverlayOpen()) return;
+
+      const indicesToAnimate = Array.from(pendingPostOverlaySpellCells);
+      pendingPostOverlaySpellCells.clear();
+
+      indicesToAnimate.forEach((cellIdx) => {
+        if (typeof cellIdx !== "number" || cellIdx < 0) return;
+        const cellEl = bingoGridEl.querySelector(`.bingo-cell[data-index="${cellIdx}"]`);
+        if (!cellEl) return;
+        cellEl.classList.remove("spell-cell-enter-exit");
+        void cellEl.offsetWidth;
+        cellEl.classList.add("spell-cell-enter-exit");
+        setTimeout(() => {
+          cellEl.classList.remove("spell-cell-enter-exit");
+        }, 1220);
+      });
+    }
+
+    function flushPostOverlayNotifications() {
+      const myPlayer = latestMatchData?.players?.[currentPlayerId];
+      if (isPlayerFrozenNow(myPlayer)) return;
+      if (isAnyBlockingOverlayOpen()) return;
+
+      if (deferredChargedElements.length > 0) {
+        const nextEl = deferredChargedElements.shift();
+        showElementChargedZoomBanner(nextEl);
+      }
+
+      if (deferredLineEvent) {
+        const ev = deferredLineEvent;
+        deferredLineEvent = null;
+        showArcaneLineBanner(ev.playerName || "Un mago", ev.color || "azul");
+      }
+
+      if (
+        animatedCellIndices.size > 0 ||
+        arcaneConquestCellIndices.size > 0 ||
+        airBlinkCellIndices.size > 0 ||
+        fireBurnCellIndices.size > 0 ||
+        metalMeltCellIndices.size > 0
+      ) {
+        if (latestMatchData) renderBingoGrid(latestMatchData);
+      }
+
+      triggerPostOverlayCellEnterExitAnimations();
+    }
+
+    function getPlayerElementCharges(playerData) {
+      const charges = (playerData && playerData.elementCharges) || {};
+      const result = {};
+      ELEMENTAL_KEYS.forEach((el) => {
+        result[el] = typeof charges[el] === "number" ? Math.max(0, Math.min(3, charges[el])) : 3;
+      });
+      return result;
+    }
+
+    function showElementChargedZoomBanner(elementKey) {
+      const existing = document.querySelector(".element-charged-banner");
+      if (existing) existing.remove();
+
+      const banner = document.createElement("div");
+      banner.className = `element-charged-banner charged-${elementKey}`;
+      banner.textContent = `✦ Magia de ${ELEMENT_DISPLAY_NAMES[elementKey] || elementKey} recargada ✦`;
+      document.body.appendChild(banner);
+      setTimeout(() => banner.remove(), 2300);
+    }
+
+    function enqueueOrShowChargedElement(elementKey) {
+      const myPlayer = latestMatchData?.players?.[currentPlayerId];
+      if (isPlayerFrozenNow(myPlayer)) return;
+      if (isAnyBlockingOverlayOpen()) {
+        if (!deferredChargedElements.includes(elementKey)) deferredChargedElements.push(elementKey);
+        return;
+      }
+      showElementChargedZoomBanner(elementKey);
+    }
+
+    function syncElementalFooterBars(myPlayer) {
+      if (!myPlayer) return;
+      const charges = getPlayerElementCharges(myPlayer);
+
+      ELEMENTAL_KEYS.forEach((el) => {
+        const barEl = $(`bar-${el}`);
+        const fillEl = $(`fill-${el}`);
+        if (!barEl || !fillEl) return;
+
+        const val = charges[el];
+        const prevVal = lastKnownElementCharges[el];
+        const isLockedByShock = isElementShortCircuited(myPlayer, el);
+        fillEl.style.width = `${Math.round((val / 3) * 100)}%`;
+        barEl.classList.toggle("is-ready", val >= 3 && !isLockedByShock);
+        barEl.classList.toggle("is-short-circuited", isLockedByShock);
+
+        if (hasReceivedInitialMatchSnapshot && typeof prevVal === "number" && val > prevVal) {
+          barEl.classList.remove("surge-up");
+          void barEl.offsetWidth;
+          barEl.classList.add("surge-up");
+          if (prevVal < 3 && val >= 3) enqueueOrShowChargedElement(el);
+        }
+        lastKnownElementCharges[el] = val;
+      });
+
+      syncMainPlayerBackgroundEffects(latestMatchData);
+
+      if (!shortCircuitInterval) {
+        shortCircuitInterval = setInterval(() => {
+          const p = latestMatchData?.players?.[currentPlayerId];
+          if (!p) return;
+          ELEMENTAL_KEYS.forEach((el) => {
+            const barEl = $(`bar-${el}`);
+            if (barEl) barEl.classList.toggle("is-short-circuited", isElementShortCircuited(p, el));
+          });
+          syncMainPlayerBackgroundEffects(latestMatchData);
+        }, 500);
+      }
+    }
+
+    function removeActiveMagicOrb() {
+      clearTimeout(orbDespawnTimeout);
+      orbDespawnTimeout = null;
+      if (activeMagicOrbEl) {
+        activeMagicOrbEl.remove();
+        activeMagicOrbEl = null;
+      }
+    }
+
+    function scheduleNextMagicOrb() {
+      clearTimeout(orbSpawnTimeout);
+      orbSpawnTimeout = setTimeout(spawnMagicOrbIfEligible, (5 + Math.random() * 5) * 1000);
+    }
+
+    function spawnMagicOrbIfEligible() {
+      if (!currentMatchId || !currentPlayerId || !latestMatchData?.players?.[currentPlayerId] || activeMagicOrbEl) {
+        scheduleNextMagicOrb();
+        return;
+      }
+
+      const myPlayer = latestMatchData.players[currentPlayerId];
+      const charges = getPlayerElementCharges(myPlayer);
+      const incompleteElements = ELEMENTAL_KEYS.filter((el) => charges[el] < 3 && !isElementShortCircuited(myPlayer, el));
+      if (incompleteElements.length === 0) {
+        scheduleNextMagicOrb();
+        return;
+      }
+
+      const chosenElement = incompleteElements[Math.floor(Math.random() * incompleteElements.length)];
+      const orb = document.createElement("button");
+      orb.type = "button";
+      orb.className = `magic-element-orb orb-${chosenElement}`;
+      orb.setAttribute("aria-label", `Esfera magica de ${chosenElement}`);
+
+      const minX = 24;
+      const maxX = Math.max(minX + 20, window.innerWidth - 82);
+      const minY = 76;
+      const maxY = Math.max(minY + 40, window.innerHeight - 108);
+      orb.style.left = `${Math.floor(minX + Math.random() * (maxX - minX))}px`;
+      orb.style.top = `${Math.floor(minY + Math.random() * (maxY - minY))}px`;
+
+      orb.addEventListener("click", (e) => {
+        e.stopPropagation();
+        handleMagicOrbClick(chosenElement, orb);
+      });
+
+      document.body.appendChild(orb);
+      activeMagicOrbEl = orb;
+
+      orbDespawnTimeout = setTimeout(() => {
+        const currentOrb = activeMagicOrbEl;
+        clearTimeout(orbDespawnTimeout);
+        orbDespawnTimeout = null;
+        if (currentOrb) {
+          currentOrb.classList.add("orb-fading-out");
+          setTimeout(() => {
+            if (activeMagicOrbEl === currentOrb) {
+              currentOrb.remove();
+              activeMagicOrbEl = null;
+            }
+            scheduleNextMagicOrb();
+          }, 650);
+        } else {
+          scheduleNextMagicOrb();
+        }
+      }, (4 + Math.random() * 6) * 1000);
+    }
+
+    async function handleMagicOrbClick(elementKey, orbEl) {
+      if (!currentMatchId || !currentPlayerId || !latestMatchData) return;
+      clearTimeout(orbDespawnTimeout);
+      orbDespawnTimeout = null;
+
+      orbEl.classList.add("orb-collected");
+      setTimeout(() => {
+        removeActiveMagicOrb();
+        scheduleNextMagicOrb();
+      }, 320);
+
+      const myPlayer = latestMatchData.players[currentPlayerId];
+      if (!myPlayer) return;
+
+      const charges = getPlayerElementCharges(myPlayer);
+      if (charges[elementKey] >= 3 || isElementShortCircuited(myPlayer, elementKey)) return;
+
+      const nextCharge = Math.min(3, charges[elementKey] + 1);
+      try {
+        await updateDoc(doc(db, "duelos", currentMatchId), {
+          [`players.${currentPlayerId}.elementCharges.${elementKey}`]: nextCharge,
+          [`players.${currentPlayerId}.usedSpells.${elementKey}`]: nextCharge < 3,
+          updatedAt: serverTimestamp()
+        });
+      } catch (err) {
+        console.error("Error recargando barra elemental:", err);
+      }
+    }
+
+    function populateFreezeIceLayer() {
+      if (!freezeIceLayer || freezeIceLayer.childElementCount > 0) return;
+
+      const vignette = document.createElement("div");
+      vignette.className = "freeze-frost-vignette";
+      freezeIceLayer.appendChild(vignette);
+
+      const shardPositions = [
+        { left: "4%", top: "6%", rot: "18deg", delay: "0s" },
+        { left: "88%", top: "8%", rot: "-22deg", delay: "-1.1s" },
+        { left: "6%", top: "76%", rot: "-16deg", delay: "-1.8s" },
+        { left: "89%", top: "74%", rot: "24deg", delay: "-0.6s" },
+        { left: "22%", top: "14%", rot: "-9deg", delay: "-2.2s" },
+        { left: "74%", top: "80%", rot: "12deg", delay: "-1.4s" }
+      ];
+      shardPositions.forEach((sp) => {
+        const shard = document.createElement("span");
+        shard.className = "freeze-crystal-shard";
+        shard.style.left = sp.left;
+        shard.style.top = sp.top;
+        shard.style.transform = `rotate(${sp.rot})`;
+        shard.style.animationDelay = sp.delay;
+        freezeIceLayer.appendChild(shard);
+      });
+
+      for (let i = 0; i < 24; i++) {
+        const flake = document.createElement("span");
+        flake.className = "freeze-ice-flake";
+        const sz = 5 + (i % 4) * 4;
+        flake.style.width = `${sz}px`;
+        flake.style.height = `${sz}px`;
+        flake.style.left = `${(i * 4.2 + 1.2) % 97}%`;
+        flake.style.setProperty("--fzdrift", `${(i % 2 === 0 ? 1 : -1) * (10 + (i % 4) * 7)}px`);
+        flake.style.setProperty("--fzdur", `${4.2 + (i % 5) * 0.8}s`);
+        flake.style.setProperty("--fzdelay", `${(i % 6) * -0.7}s`);
+        freezeIceLayer.appendChild(flake);
+      }
+    }
+
+    function getOrCreateDeviceProfile() {
+      try {
+        const raw = localStorage.getItem(DEVICE_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed.uid_device === "string" && parsed.uid_device) return parsed;
+        }
+      } catch (err) {
+        console.warn("No se pudo leer localStorage:", err);
+      }
+
+      const generatedUid =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? `dev_${crypto.randomUUID()}`
+          : `dev_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
+
+      return saveDeviceProfile({ uid_device: generatedUid, name: "", playerId: null });
+    }
+
+    function saveDeviceProfile(patch) {
+      try {
+        const raw = localStorage.getItem(DEVICE_STORAGE_KEY);
+        const current = raw ? JSON.parse(raw) : {};
+        const next = { ...current, ...patch };
+        localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(next));
+        return next;
+      } catch (err) {
+        console.warn("No se pudo guardar localStorage:", err);
+        return patch;
+      }
+    }
+
+    function populateMainMagicOverlay() {
+      if (!mainMagicOverlay || mainMagicOverlay.querySelector(".main-arcane-letter")) return;
+
+      const starCoords = [
+        [10.5, 14.6], [27, 8.6], [44, 15.6], [59.5, 10.6],
+        [66.2, 20.8], [83.5, 15.3], [91.2, 26.3], [78, 32.6],
+        [12, 71.6], [29, 78.6], [43, 73.6], [56, 86.3],
+        [74, 82], [89, 89], [16, 48], [88, 52]
+      ];
+      starCoords.forEach(([xPct, yPct], idx) => {
+        const star = document.createElement("span");
+        star.className = "astro-star-dot";
+        star.style.left = `${xPct}%`;
+        star.style.top = `${yPct}%`;
+        star.style.setProperty("--stsz", `${2.5 + (idx % 3) * 1.4}px`);
+        star.style.setProperty("--stdur", `${2.8 + (idx % 4) * 0.85}s`);
+        star.style.setProperty("--stdelay", `${(idx % 5) * -0.6}s`);
+        mainMagicOverlay.appendChild(star);
+      });
+
+      const runes = ["ᚱ", "ᚢ", "ᚾ", "ᚨ", "ᚲ", "ᛊ", "ᛏ", "ᛒ", "ᛚ", "ᛗ", "ᛟ", "ᚷ", "ᚹ", "ᚺ"];
+      for (let i = 0; i < 5; i++) {
+        const el = document.createElement("span");
+        el.className = "main-arcane-letter";
+        el.textContent = runes[(i * 3) % runes.length];
+        el.style.left = `${10 + ((i * 19) % 82)}%`;
+        el.style.top = `${12 + ((i * 23) % 76)}%`;
+        el.style.setProperty("--msz", `${1.2 + (i % 3) * 0.3}rem`);
+        el.style.setProperty("--mx", `${(i % 2 === 0 ? 1 : -1) * (10 + (i % 3) * 6)}px`);
+        el.style.setProperty("--my", `${(i % 3 === 0 ? -1 : 1) * (10 + (i % 3) * 6)}px`);
+        el.style.setProperty("--mrot", `${(i - 2) * 8}deg`);
+        el.style.setProperty("--mdur", `${8 + (i % 3) * 1.6}s`);
+        el.style.setProperty("--mdelay", `${i * -1.4}s`);
+        mainMagicOverlay.appendChild(el);
+      }
+
+      for (let i = 0; i < 6; i++) {
+        const sp = document.createElement("span");
+        sp.className = "main-wand-spark";
+        sp.style.left = `${12 + ((i * 16) % 78)}%`;
+        sp.style.top = `${24 + ((i * 19) % 62)}%`;
+        sp.style.setProperty("--wssz", `${4 + (i % 2) * 1.5}px`);
+        sp.style.setProperty("--wsx", `${(i % 2 === 0 ? 1 : -1) * (14 + (i % 3) * 8)}px`);
+        sp.style.setProperty("--wsy", `${-30 - (i % 3) * 14}px`);
+        sp.style.setProperty("--wsdur", `${3.2 + (i % 3) * 0.8}s`);
+        sp.style.setProperty("--wsdelay", `${i * -0.7}s`);
+        mainMagicOverlay.appendChild(sp);
+      }
+    }
+
+    async function seedTestUsersIfNeeded() {
+      const savedProfile = getOrCreateDeviceProfile();
+      if (savedProfile.name && !nameInput.value) nameInput.value = savedProfile.name;
+
+      try {
+        startBtn.disabled = true;
+        const snapshot = await getDocs(collection(db, "magos"));
+        const existingIds = new Set(snapshot.docs.map((d) => d.id));
+
+        for (const wizard of TEST_WIZARDS) {
+          if (!existingIds.has(wizard.id)) {
+            await setDoc(doc(db, "magos", wizard.id), {
+              name: wizard.name,
+              isTest: true,
+              matchId: null,
+              opponents: [],
+              createdAt: serverTimestamp()
+            });
+          }
+        }
+
+        const matchedByDevice = snapshot.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .find((u) => u.uid_device && u.uid_device === savedProfile.uid_device);
+
+        if (matchedByDevice?.name) {
+          nameInput.value = matchedByDevice.name;
+          saveDeviceProfile({ name: matchedByDevice.name, playerId: matchedByDevice.id });
+          loginStatus.textContent = `Perfil reconocido: ${matchedByDevice.name}. Pulsa "Entrar al Torneo" para continuar.`;
+          startBtn.disabled = false;
+          return;
+        }
+
+        loginStatus.textContent = savedProfile.name
+          ? `Nombre guardado en este dispositivo: ${savedProfile.name}. Pulsa "Entrar al Torneo" para continuar.`
+          : "7 magos listos en la arena. Introduce tu nombre y pulsa Entrar al Torneo.";
+        startBtn.disabled = false;
+      } catch (err) {
+        console.error("Error conectando con Firestore:", err);
+        loginStatus.textContent = "Error de conexion con Firestore. Revisa las reglas.";
+        startBtn.disabled = false;
+      }
+    }
+
+    function pickRandomItems(array, count) {
+      const copy = [...array];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy.slice(0, count);
+    }
+
+    function formatRemainingMs(ms) {
+      const totalSec = Math.max(0, Math.ceil(ms / 1000));
+      const mins = String(Math.floor(totalSec / 60)).padStart(2, "0");
+      const secs = String(totalSec % 60).padStart(2, "0");
+      return `${mins}:${secs}`;
+    }
+
+    async function registerAndMatchmake(overrideName = null, overrideDeviceUid = null) {
+      const rawName = (typeof overrideName === "string" ? overrideName : nameInput.value).trim();
+      if (!rawName) {
+        loginStatus.textContent = "Escribe un nombre de mago antes de entrar.";
+        nameInput.focus();
+        return;
+      }
+
+      const deviceProfile = getOrCreateDeviceProfile();
+      const uidDevice = overrideDeviceUid || deviceProfile.uid_device;
+      saveDeviceProfile({ name: rawName, uid_device: uidDevice });
+
+      startBtn.disabled = true;
+      loginStatus.textContent = "Comprobando grimorio y emparejamiento...";
+
+      try {
+        const usersSnap = await getDocs(collection(db, "magos"));
+        const allUsers = usersSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        const normalizedTarget = rawName.toLowerCase();
+
+        const existingWizard =
+          allUsers.find((u) => u.uid_device && u.uid_device === uidDevice) ||
+          allUsers.find((u) => typeof u.name === "string" && u.name.trim().toLowerCase() === normalizedTarget);
+
+        if (existingWizard?.matchId) {
+          currentPlayerId = existingWizard.id;
+          currentMatchId = existingWizard.matchId;
+          saveDeviceProfile({ name: existingWizard.name || rawName, playerId: currentPlayerId, uid_device: uidDevice });
+          loginStatus.textContent = "Mago reconocido. Reconectando a tu duelo...";
+          showGameScreen();
+          subscribeToMatchRealtime(currentMatchId);
+          return;
+        }
+
+        let availablePool = allUsers.filter((u) => !u.matchId);
+        if (availablePool.length === 0) availablePool = allUsers.filter((u) => u.isTest);
+
+        const newPlayerRef = existingWizard ? doc(db, "magos", existingWizard.id) : doc(collection(db, "magos"));
+        currentPlayerId = newPlayerRef.id;
+        const resolvedName = existingWizard ? existingWizard.name : rawName;
+        saveDeviceProfile({ name: resolvedName, playerId: currentPlayerId, uid_device: uidDevice });
+
+        availablePool = availablePool.filter((u) => {
+          if (u.id === currentPlayerId) return false;
+          if (u.uid_device && u.uid_device === uidDevice) return false;
+          if (typeof u.name === "string" && u.name.trim().toLowerCase() === normalizedTarget) return false;
+          return true;
+        });
+
+        const currentPlayer = {
+          id: currentPlayerId,
+          name: resolvedName,
+          isTest: Boolean(existingWizard?.isTest)
+        };
+
+        const totalPoolCount = availablePool.length + 1;
+        const shouldCreateTruelo = availablePool.length >= 2 && (totalPoolCount % 2 !== 0 || Math.random() < 0.35);
+        const rivalsNeeded = shouldCreateTruelo ? 2 : Math.min(1, availablePool.length);
+        const participants = [currentPlayer, ...pickRandomItems(availablePool, rivalsNeeded).filter((p) => p.id !== currentPlayerId)];
+
+        const isTruelo = participants.length === 3;
+        const boardSize = isTruelo ? 20 : 16;
+        const matchId = `duelo_${Date.now().toString(36)}`;
+        currentMatchId = matchId;
+
+        const sharedDuelBoard = pickRandomItems(EUROVISION_EVENTS_32, boardSize);
+        const shuffledColors = pickRandomItems(ARCANE_COLORS, participants.length);
+
+        const playersData = {};
+        participants.forEach((p, idx) => {
+          playersData[p.id] = {
+            id: p.id,
+            name: p.name,
+            color: shuffledColors[idx] || ARCANE_COLORS[idx % ARCANE_COLORS.length],
+            board: [...sharedDuelBoard],
+            conqueredEverCount: 0,
+            linesEverCount: 0,
+            score: 0,
+            opponents: participants.filter((other) => other.id !== p.id).map((other) => other.name),
+            elementCharges: { fire: 3, water: 3, air: 3, earth: 3 },
+            usedSpells: { arcane: false, water: false, air: false, earth: false, fire: false },
+            arcaneReadyAt: 0,
+            frozenUntil: 0
+          };
+        });
+
+        await setDoc(doc(db, "duelos", matchId), {
+          matchId,
+          mode: isTruelo ? "truelo" : "duelo",
+          gridSize: boardSize,
+          sharedBoard: sharedDuelBoard,
+          participantIds: participants.map((p) => p.id),
+          players: playersData,
+          cellClaims: {},
+          earthLocks: {},
+          plantCells: {},
+          metalArmors: {},
+          potionEvent: null,
+          spellCastEvent: null,
+          lineAnnouncementEvent: null,
+          updatedAt: serverTimestamp()
+        });
+
+        for (const p of participants) {
+          const userDocPayload = {
+            name: p.name,
+            isTest: Boolean(p.isTest),
+            matchId,
+            opponents: participants.filter((other) => other.id !== p.id).map((other) => other.id),
+            updatedAt: serverTimestamp()
+          };
+          if (p.id === currentPlayerId) userDocPayload.uid_device = uidDevice;
+          await setDoc(doc(db, "magos", p.id), userDocPayload, { merge: true });
+        }
+
+        showGameScreen();
+        subscribeToMatchRealtime(matchId);
+      } catch (err) {
+        console.error("Error en emparejamiento:", err);
+        loginStatus.textContent = "No se pudo crear el duelo. Revisa consola/Firestore.";
+        startBtn.disabled = false;
+      }
+    }
+
+    function showGameScreen() {
+      loginScreen.style.display = "none";
+      const isLandscape = window.matchMedia("(orientation: landscape) and (max-height: 540px)").matches;
+      gameScreen.style.display = isLandscape ? "grid" : "flex";
+      populateMainMagicOverlay();
+      ensureMainPlayerFxTicker();
+      syncMainPlayerBackgroundEffects(latestMatchData);
+      if (!orbSpawnTimeout && !activeMagicOrbEl) scheduleNextMagicOrb();
+    }
+
+    window.addEventListener("resize", () => {
+      if (currentMatchId) showGameScreen();
+    });
+
+    function subscribeToMatchRealtime(matchId) {
+      if (unsubscribeMatch) unsubscribeMatch();
+      hasReceivedInitialMatchSnapshot = false;
+      unsubscribeMatch = onSnapshot(doc(db, "duelos", matchId), (docSnap) => {
+        if (!docSnap.exists()) return;
+        const data = docSnap.data();
+        const isFirstSnapshot = !hasReceivedInitialMatchSnapshot;
+        latestMatchData = data;
+
+        const myPlayer = data.players?.[currentPlayerId];
+        renderScoreboard(data.players, data.participantIds);
+        renderBingoGrid(data);
+        syncElementalFooterBars(myPlayer);
+        syncEarthTimers(data);
+        syncFreezeOverlay(myPlayer);
+        syncMainPlayerBackgroundEffects(data);
+
+        if (isFirstSnapshot) {
+          if (data.potionEvent?.requestId && data.potionEvent.targetId !== currentPlayerId) {
+            handledPotionRequestId = data.potionEvent.requestId;
+          }
+          if (data.spellCastEvent?.id) handledSpellCastEventId = data.spellCastEvent.id;
+          if (data.lineAnnouncementEvent?.id) handledLineEventId = data.lineAnnouncementEvent.id;
+          hasReceivedInitialMatchSnapshot = true;
+          syncIncomingPotionOverlay(data);
+          return;
+        }
+
+        syncIncomingPotionOverlay(data);
+        syncIncomingSpellCastOverlay(data);
+        syncIncomingLineEvent(data);
+      });
+    }
+
+    function getActiveEarthLock(matchData, cellIndex) {
+      const lock = matchData?.earthLocks?.[String(cellIndex)];
+      return lock?.expiresAt && Date.now() < lock.expiresAt ? lock : null;
+    }
+
+    async function clearExpiredEarthLocksIfNeeded(matchData) {
+      if (!currentMatchId || !matchData?.earthLocks) return;
+      const locks = matchData.earthLocks;
+      const claims = matchData.cellClaims || {};
+      const now = Date.now();
+      const updates = {};
+
+      Object.keys(locks).forEach((key) => {
+        const lock = locks[key];
+        const runKey = `${currentMatchId}_${key}_${lock?.expiresAt || "0"}`;
+        if (lock?.expiresAt && now >= lock.expiresAt && !expiredEarthKeys.has(runKey)) {
+          expiredEarthKeys.add(runKey);
+          if (!claims[key]?.playerId) updates[`earthLocks.${key}`] = null;
+        }
+      });
+
+      if (Object.keys(updates).length > 0) {
+        try {
+          await updateDoc(doc(db, "duelos", currentMatchId), updates);
+        } catch (err) {
+          console.error("Error limpiando bloqueo de Tierra expirado:", err);
+        }
+      }
+    }
+
+    function syncEarthTimers(matchData) {
+      clearInterval(earthTimerInterval);
+      clearExpiredEarthLocksIfNeeded(matchData);
+
+      const updateBadges = () => {
+        const badges = bingoGridEl.querySelectorAll(".earth-timer-badge[data-expires]");
+        let anyExpiredNow = false;
+        badges.forEach((badge) => {
+          const left = Number(badge.getAttribute("data-expires") || 0) - Date.now();
+          if (left > 0) {
+            badge.textContent = formatRemainingMs(left);
+          } else {
+            badge.textContent = "00:00";
+            anyExpiredNow = true;
+          }
+        });
+        if (anyExpiredNow && latestMatchData) {
+          clearExpiredEarthLocksIfNeeded(latestMatchData);
+          renderBingoGrid(latestMatchData);
+        }
+      };
+      updateBadges();
+      earthTimerInterval = setInterval(updateBadges, 1000);
+    }
+
+    function getGridDimensions(matchData) {
+      const total = matchData?.gridSize || ((matchData?.mode === "truelo" || matchData?.participantIds?.length === 3) ? 20 : 16);
+      const cols = 4;
+      const rows = Math.max(1, Math.round(total / cols));
+      return { cols, rows, total };
+    }
+
+    function getNeutralCellIndicesSet(matchData) {
+      const neutralSet = new Set();
+      if (!matchData) return neutralSet;
+      if (matchData.plantCells && typeof matchData.plantCells === "object") {
+        Object.entries(matchData.plantCells).forEach(([idxKey, val]) => {
+          if (val && val.playerId) neutralSet.add(Number(idxKey));
+        });
+      }
+      if (matchData.earthLocks && typeof matchData.earthLocks === "object") {
+        Object.entries(matchData.earthLocks).forEach(([idxKey, val]) => {
+          if (val && val.playerId) neutralSet.add(Number(idxKey));
+        });
+      }
+      return neutralSet;
+    }
+
+    function countCompletedLinesForPlayer(pid, cols, rows, matchData = null) {
+      const activeMatch = matchData || latestMatchData;
+      if (!pid || !activeMatch?.cellClaims) return 0;
+      const neutralSet = getNeutralCellIndicesSet(activeMatch);
+      const ownedSet = new Set(
+        Object.entries(activeMatch.cellClaims)
+          .filter(([idxKey, c]) => c && c.playerId === pid && !neutralSet.has(Number(idxKey)))
+          .map(([idxKey]) => Number(idxKey))
+      );
+      let lines = 0;
+
+      for (let r = 0; r < rows; r++) {
+        let rowComplete = true;
+        for (let c = 0; c < cols; c++) {
+          const cellIdx = r * cols + c;
+          if (neutralSet.has(cellIdx) || !ownedSet.has(cellIdx)) {
+            rowComplete = false;
+            break;
+          }
+        }
+        if (rowComplete) lines++;
+      }
+
+      for (let c = 0; c < cols; c++) {
+        let colComplete = true;
+        for (let r = 0; r < rows; r++) {
+          const cellIdx = r * cols + c;
+          if (neutralSet.has(cellIdx) || !ownedSet.has(cellIdx)) {
+            colComplete = false;
+            break;
+          }
+        }
+        if (colComplete) lines++;
+      }
+
+      if (cols === rows) {
+        let diag1 = true;
+        let diag2 = true;
+        for (let i = 0; i < rows; i++) {
+          const idx1 = i * cols + i;
+          const idx2 = i * cols + (rows - 1 - i);
+          if (neutralSet.has(idx1) || !ownedSet.has(idx1)) diag1 = false;
+          if (neutralSet.has(idx2) || !ownedSet.has(idx2)) diag2 = false;
+        }
+        if (diag1) lines++;
+        if (diag2) lines++;
+      }
+
+      return lines;
+    }
+
+    function computeWizardPoints(playerData, matchData = latestMatchData, playerId = null) {
+      return computePlayerScore(playerData, matchData, playerId);
+    }
+
+    function computePlayerScore(playerData, matchData, playerId = null) {
+      if (!playerData) return 0;
+      const activeMatch = matchData || latestMatchData;
+      const neutralSet = getNeutralCellIndicesSet(activeMatch);
+      const conqueredEver = typeof playerData.conqueredEverCount === "number" ? playerData.conqueredEverCount : 0;
+      const pid = playerId || playerData.id;
+      const currentClaimedCount = pid && activeMatch?.cellClaims
+        ? Object.entries(activeMatch.cellClaims)
+            .filter(([idxKey, c]) => c && c.playerId === pid && !neutralSet.has(Number(idxKey)))
+            .length
+        : 0;
+      const conqueredTotal = Math.max(conqueredEver, currentClaimedCount);
+      const { cols, rows } = getGridDimensions(activeMatch);
+      const completedLines = pid ? countCompletedLinesForPlayer(pid, cols, rows, activeMatch) : 0;
+      const linesEver = Math.max(
+        typeof playerData.linesEverCount === "number" ? playerData.linesEverCount : 0,
+        completedLines
+      );
+      return conqueredTotal + linesEver * 2;
+    }
+
+    function showArcaneLineBanner(playerName, color) {
+      const existing = document.querySelector(".arcane-line-banner");
+      if (existing) existing.remove();
+
+      const safeColor = ARCANE_COLORS.includes(color) ? color : "azul";
+      const banner = document.createElement("div");
+      banner.className = `arcane-line-banner line-color-${safeColor}`;
+      banner.textContent = `✦ ${playerName} ha completado una linea ✦`;
+      document.body.appendChild(banner);
+      setTimeout(() => banner.remove(), 5250);
+    }
+
+    function syncIncomingLineEvent(matchData) {
+      const ev = matchData?.lineAnnouncementEvent;
+      if (!ev?.id || ev.id === handledLineEventId || ev.playerId === currentPlayerId) return;
+      handledLineEventId = ev.id;
+
+      const myPlayer = matchData?.players?.[currentPlayerId];
+      if (isPlayerFrozenNow(myPlayer) || isAnyBlockingOverlayOpen()) {
+        deferredLineEvent = ev;
+        return;
+      }
+      showArcaneLineBanner(ev.playerName || "Un mago", ev.color || "azul");
+    }
+
+    function renderScoreboard(playersObj, participantIds) {
+      scoreboardEl.innerHTML = "";
+      const ids = participantIds && participantIds.length ? participantIds : Object.keys(playersObj || {});
+
+      ids.forEach((pid) => {
+        const p = playersObj?.[pid];
+        if (!p) return;
+        const isFrozenNow = isPlayerFrozenNow(p);
+        const pill = document.createElement("div");
+        const colorClass = p.color && ARCANE_COLORS.includes(p.color) ? `arcane-border-${p.color}` : "";
+        pill.className = `player-pill ${pid === currentPlayerId ? "is-me" : ""} ${colorClass} ${isFrozenNow ? "is-frozen" : ""}`.trim();
+        pill.setAttribute("data-pid", pid);
+
+        const ratio = getArcaneChargeRatio(p, pid, latestMatchData);
+        const pct = (ratio * 100).toFixed(2);
+        const mistColor = ARCANE_COLORS.includes(p.color) ? p.color : "azul";
+        const mistEl = document.createElement("div");
+        mistEl.className = `arcane-mist-progress mist-${mistColor} ${ratio >= 1 ? "is-charged" : ""}`.trim();
+        mistEl.setAttribute("data-pid", pid);
+        mistEl.style.setProperty("--arcane-pct", `${pct}%`);
+        pill.appendChild(mistEl);
+
+        const mainRow = document.createElement("div");
+        mainRow.className = "player-pill-main";
+
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "player-name";
+        nameSpan.textContent = p.name || "Mago";
+
+        const scoreSpan = document.createElement("span");
+        scoreSpan.className = "player-score";
+        scoreSpan.textContent = String(computePlayerScore(p, latestMatchData, pid));
+        if (isFrozenNow) {
+          const freezeBadge = document.createElement("span");
+          freezeBadge.className = "frozen-score-badge";
+          freezeBadge.textContent = "❄️";
+          freezeBadge.title = "Mago congelado por Agua";
+          scoreSpan.appendChild(freezeBadge);
+        }
+
+        if (getPendingPotionInfo(latestMatchData, pid)) {
+          const alembicSpan = document.createElement("span");
+          alembicSpan.className = "potion-pending-alembic";
+          alembicSpan.textContent = "⚗️";
+          nameSpan.appendChild(alembicSpan);
+        }
+
+        mainRow.appendChild(nameSpan);
+        mainRow.appendChild(scoreSpan);
+        pill.appendChild(mainRow);
+
+        const charges = getPlayerElementCharges(p);
+        const badgesRow = document.createElement("div");
+        badgesRow.className = "player-magic-badges";
+
+        const magicItems = [
+          { key: "water", symbol: "💧", title: "Agua" },
+          { key: "fire", symbol: "🔥", title: "Fuego" },
+          { key: "earth", symbol: "🪨", title: "Tierra" },
+          { key: "air", symbol: "🌪️", title: "Aire" }
+        ];
+
+        magicItems.forEach((m) => {
+          const isActive = charges[m.key] >= 3 && !isElementShortCircuited(p, m.key);
+          const badge = document.createElement("span");
+          badge.className = `magic-state-icon icon-${m.key} ${isActive ? "is-active" : "is-inactive"}`;
+          badge.textContent = m.symbol;
+          badge.title = `${m.title}: ${charges[m.key]}/3${isElementShortCircuited(p, m.key) ? " (Cortocircuito)" : isActive ? " (Listo)" : " (Cargando)"}`;
+          badgesRow.appendChild(badge);
+        });
+
+        pill.appendChild(badgesRow);
+        scoreboardEl.appendChild(pill);
+      });
+
+      ensureArcaneChargeTicker();
+      updateArcaneScoreMistBars();
+      syncActivePotionSubtleBubbles(latestMatchData);
+    }
+
+    function renderBingoGrid(matchData) {
+      const { total } = getGridDimensions(matchData);
+      const isTruelo = total === 20;
+      bingoGridEl.classList.toggle("truelo-grid", isTruelo);
+
+      const board = Array.isArray(matchData.sharedBoard) && matchData.sharedBoard.length === total
+        ? matchData.sharedBoard
+        : (matchData.players?.[currentPlayerId]?.board || EUROVISION_EVENTS_32.slice(0, total));
+
+      const claims = matchData.cellClaims || {};
+      const myPlayer = matchData.players?.[currentPlayerId];
+      const isFrozen = isPlayerFrozenNow(myPlayer);
+      const overlaysOpen = isAnyBlockingOverlayOpen();
+
+      bingoGridEl.innerHTML = "";
+
+      for (let i = 0; i < total; i++) {
+        const cell = document.createElement("div");
+        cell.className = "bingo-cell";
+        cell.dataset.index = String(i);
+
+        const claim = claims[String(i)];
+        const earthLock = getActiveEarthLock(matchData, i);
+        const plantCell = getActivePlantCell(matchData, i);
+        const metalArmor = claim?.playerId ? getActiveMetalArmor(matchData, i) : null;
+        const claimedColor = claim?.color;
+
+        cell.classList.remove("plant-germinated");
+        cell.querySelectorAll(".plant-owner-dot").forEach((dot) => dot.remove());
+        if (plantCell) cell.classList.add("plant-germinated");
+        if (earthLock && !claim?.playerId) cell.classList.add("earth-locked");
+        if (claimedColor && ARCANE_COLORS.includes(claimedColor)) cell.classList.add(`claimed-${claimedColor}`);
+        if (metalArmor) cell.classList.add("metal-armored");
+        if (airSourceCellIndex === i) cell.classList.add("air-selected");
+
+        if (!isFrozen && !overlaysOpen && animatedCellIndices.has(i)) {
+          cell.classList.add("rune-updated");
+          animatedCellIndices.delete(i);
+        }
+
+        if (!isFrozen && !overlaysOpen && arcaneConquestCellIndices.has(i)) {
+          cell.classList.add("arcane-conquest-fx");
+          arcaneConquestCellIndices.delete(i);
+        }
+
+        if (!isFrozen && !overlaysOpen && airBlinkCellIndices.has(i)) {
+          const partnerIdx = airBlinkCellIndices.get(i);
+          if (typeof partnerIdx === "number") {
+            const { cols } = getGridDimensions(matchData);
+            const dxCols = (partnerIdx % cols) - (i % cols);
+            const dyRows = Math.floor(partnerIdx / cols) - Math.floor(i / cols);
+            const gridRect = bingoGridEl.getBoundingClientRect();
+            const cellW = gridRect.width > 0 ? gridRect.width / cols : 76;
+            const cellH = gridRect.height > 0 ? gridRect.height / Math.max(1, Math.round(total / cols)) : 76;
+            cell.style.setProperty("--air-dx", `${Math.round(dxCols * cellW)}px`);
+            cell.style.setProperty("--air-dy", `${Math.round(dyRows * cellH)}px`);
+          }
+          cell.classList.add("air-moved-blink");
+          airBlinkCellIndices.delete(i);
+        }
+
+        if (!isFrozen && !overlaysOpen && fireBurnCellIndices.has(i)) {
+          cell.classList.add("fire-burn-effect");
+          fireBurnCellIndices.delete(i);
+        }
+
+        if (!isFrozen && !overlaysOpen && metalMeltCellIndices.has(i)) {
+          cell.classList.add("metal-melting-fx");
+          metalMeltCellIndices.delete(i);
+        }
+
+        if (metalArmor) {
+          const claimColor = claim?.color && ARCANE_COLORS.includes(claim.color) ? claim.color : null;
+          const rivetPalettes = {
+            azul: {
+              bg: "radial-gradient(circle at 35% 35%, #eff6ff 0%, #3b82f6 58%, #1e3a8a 100%)",
+              border: "1px solid #172554",
+              shadow: "0 0 7px rgba(96, 165, 250, 0.9), 0 1px 2px rgba(0, 0, 0, 0.85)"
+            },
+            morado: {
+              bg: "radial-gradient(circle at 35% 35%, #faf5ff 0%, #a855f7 58%, #4c1d95 100%)",
+              border: "1px solid #2e1065",
+              shadow: "0 0 7px rgba(192, 132, 252, 0.9), 0 1px 2px rgba(0, 0, 0, 0.85)"
+            },
+            naranja: {
+              bg: "radial-gradient(circle at 35% 35%, #fff7ed 0%, #f97316 58%, #7c2d12 100%)",
+              border: "1px solid #431407",
+              shadow: "0 0 7px rgba(251, 146, 60, 0.9), 0 1px 2px rgba(0, 0, 0, 0.85)"
+            }
+          };
+          const palette = claimColor ? rivetPalettes[claimColor] : null;
+          ["rivet-tl", "rivet-tr", "rivet-bl", "rivet-br"].forEach((posClass) => {
+            const rivet = document.createElement("span");
+            rivet.className = `metal-rivet ${posClass}${claimColor ? ` rivet-${claimColor}` : ""}`;
+            if (palette) {
+              rivet.style.background = palette.bg;
+              rivet.style.border = palette.border;
+              rivet.style.boxShadow = palette.shadow;
+            }
+            cell.appendChild(rivet);
+          });
+        }
+
+        const labelSpan = document.createElement("span");
+        labelSpan.textContent = board[i] || `Evento ${i + 1}`;
+        cell.appendChild(labelSpan);
+
+        if (plantCell && plantCell.playerId) {
+          const plantOwnerColor = matchData.players?.[plantCell.playerId]?.color;
+          if (plantOwnerColor && ARCANE_COLORS.includes(plantOwnerColor)) {
+            const plantDot = document.createElement("span");
+            plantDot.className = `plant-owner-dot dot-${plantOwnerColor}`;
+            cell.appendChild(plantDot);
+          }
+        }
+
+        if (earthLock && !claim?.playerId) {
+          const ownerColor = matchData.players?.[earthLock.playerId]?.color;
+          if (ownerColor && ARCANE_COLORS.includes(ownerColor)) {
+            const dot = document.createElement("span");
+            dot.className = `earth-owner-dot dot-${ownerColor}`;
+            cell.appendChild(dot);
+          }
+
+          const badge = document.createElement("span");
+          badge.className = "earth-timer-badge";
+          badge.setAttribute("data-expires", String(earthLock.expiresAt));
+          badge.textContent = formatRemainingMs(earthLock.expiresAt - Date.now());
+          cell.appendChild(badge);
+        }
+
+        if (airSourceCellIndex !== null && !isFrozen) {
+          if (airSourceCellIndex === i) {
+            cell.draggable = true;
+            cell.addEventListener("dragstart", (e) => {
+              if (e.dataTransfer) {
+                e.dataTransfer.effectAllowed = "move";
+                e.dataTransfer.setData("text/plain", String(i));
+              }
+            });
+          } else if (!earthLock && !metalArmor) {
+            cell.addEventListener("dragover", (e) => {
+              e.preventDefault();
+              if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+              cell.classList.add("air-drag-target");
+            });
+            cell.addEventListener("dragleave", () => {
+              cell.classList.remove("air-drag-target");
+            });
+            cell.addEventListener("drop", async (e) => {
+              e.preventDefault();
+              cell.classList.remove("air-drag-target");
+              await completeAirMove(i);
+            });
+          }
+        }
+
+        cell.addEventListener("click", () => handleCellClick(i));
+        bingoGridEl.appendChild(cell);
+      }
+
+      if (!isFrozen && !overlaysOpen && pendingPostOverlaySpellCells.size > 0) {
+        triggerPostOverlayCellEnterExitAnimations();
+      }
+    }
+
+    async function handleCellClick(index) {
+      if (!currentMatchId || !currentPlayerId || !latestMatchData) return;
+
+      const myPlayer = latestMatchData.players?.[currentPlayerId];
+      if (!myPlayer || isPlayerFrozenNow(myPlayer)) return;
+
+      if (airSourceCellIndex !== null) {
+        if (airSourceCellIndex === index) {
+          cancelAirMode();
+          return;
+        }
+        await completeAirMove(index);
+        return;
+      }
+
+      openSpellModal(index);
+    }
+
+    function setSpellButtonState(btnEl, itemEl, { used = false, available = true }) {
+      btnEl.classList.toggle("spell-used", Boolean(used));
+      const canClick = !used && Boolean(available);
+      btnEl.disabled = !canClick;
+      btnEl.classList.toggle("spell-unavailable", !canClick);
+      if (itemEl) itemEl.classList.toggle("is-unavailable", !canClick);
+    }
+
+    function openSpellModal(index) {
+      if (!latestMatchData) return;
+      const { total } = getGridDimensions(latestMatchData);
+      const board = Array.isArray(latestMatchData.sharedBoard) && latestMatchData.sharedBoard.length === total
+        ? latestMatchData.sharedBoard
+        : (latestMatchData.players?.[currentPlayerId]?.board || EUROVISION_EVENTS_32.slice(0, total));
+
+      const myPlayer = latestMatchData.players?.[currentPlayerId] || {};
+      const charges = getPlayerElementCharges(myPlayer);
+      const claim = latestMatchData.cellClaims?.[String(index)];
+      const earthLock = getActiveEarthLock(latestMatchData, index);
+      const plantCell = getActivePlantCell(latestMatchData, index);
+      const metalArmor = getActiveMetalArmor(latestMatchData, index);
+      const isClaimed = Boolean(claim?.playerId);
+      const claimedByMe = claim?.playerId === currentPlayerId;
+      const claimedByRival = isClaimed && !claimedByMe;
+      const lockedByAny = Boolean(earthLock?.playerId);
+      const canConquer = isArcaneSpellReady(myPlayer) && !isClaimed && !lockedByAny;
+
+      selectedSpellCellIndex = index;
+      spellCellPreview.textContent = `Casilla ${index + 1}: "${board[index] || ""}"`;
+
+      setSpellButtonState(btnArcaneSpell, arcaneSpellItem, {
+        used: false,
+        available: canConquer
+      });
+      if (lockedByAny) {
+        arcaneSpellDesc.textContent = "Esta casilla esta bloqueada por Tierra y no se puede conquistar.";
+      } else if (claimedByMe) {
+        arcaneSpellDesc.textContent = "Ya has conquistado esta casilla con tu color arcano.";
+      } else if (claimedByRival) {
+        arcaneSpellDesc.textContent = "Esta casilla ya esta conquistada por un rival y no puede conquistarse.";
+      } else if (!isArcaneSpellReady(myPlayer)) {
+        arcaneSpellDesc.textContent = "La magia arcana se esta recargando (15 segundos)...";
+      } else {
+        arcaneSpellDesc.textContent = "Reclama esta casilla libre con tu color arcano. Una casilla conquistada nunca podra ser conquistada por otro mago rival.";
+      }
+
+      const rivalIds = getRivalIds(latestMatchData);
+      const canFreeze = rivalIds.length > 0 && charges.water >= 3 && !isElementShortCircuited(myPlayer, "water");
+      setSpellButtonState(btnWaterSpell, waterSpellItem, {
+        used: charges.water < 3,
+        available: canFreeze
+      });
+
+      const canMoveCell = !lockedByAny && !metalArmor && charges.air >= 3 && !isElementShortCircuited(myPlayer, "air");
+      setSpellButtonState(btnAirSpell, airSpellItem, {
+        used: charges.air < 3,
+        available: canMoveCell
+      });
+
+      const canLockCell = !lockedByAny && !isClaimed && charges.earth >= 3 && !isElementShortCircuited(myPlayer, "earth");
+      setSpellButtonState(btnEarthSpell, earthSpellItem, {
+        used: charges.earth < 3,
+        available: canLockCell
+      });
+
+      const canDispelCell = claimedByRival && !lockedByAny && charges.fire >= 3 && !isElementShortCircuited(myPlayer, "fire");
+      setSpellButtonState(btnFireSpell, fireSpellItem, {
+        used: charges.fire < 3,
+        available: canDispelCell
+      });
+
+      const unlockedHybrids = getUnlockedHybridSpells(myPlayer);
+      combineElementsBox.classList.toggle("is-unlocked", unlockedHybrids.length > 0);
+      if (unlockedHybrids.length > 0) {
+        combineElementsHint.textContent = `${unlockedHybrids.length} combinacion${unlockedHybrids.length > 1 ? "es" : ""} disponible${unlockedHybrids.length > 1 ? "s" : ""} en la mesa arcana.`;
+      }
+
+      spellModalBackdrop.classList.add("open");
+    }
+
+    function openFusionTableModal() {
+      if (!latestMatchData || selectedSpellCellIndex === null) return;
+      const myPlayer = latestMatchData.players?.[currentPlayerId] || {};
+      const unlocked = getUnlockedHybridSpells(myPlayer);
+      const cellIndex = selectedSpellCellIndex;
+      const claim = latestMatchData.cellClaims?.[String(cellIndex)];
+      const earthLock = getActiveEarthLock(latestMatchData, cellIndex);
+      const plantCell = getActivePlantCell(latestMatchData, cellIndex);
+      const metalArmor = getActiveMetalArmor(latestMatchData, cellIndex);
+      const isClaimed = Boolean(claim?.playerId);
+      const claimedByMe = claim?.playerId === currentPlayerId;
+      const rivalIds = getRivalIds(latestMatchData);
+
+      fusionSpellsList.innerHTML = "";
+      ELEMENT_COMBINATIONS.forEach((combo) => {
+        const isUnlocked = unlocked.some((u) => u.id === combo.id);
+        let canCastNow = isUnlocked;
+
+        if (combo.id === "plant") {
+          canCastNow = isUnlocked && !isClaimed && !earthLock && !plantCell;
+        } else if (combo.id === "metal") {
+          canCastNow = isUnlocked && claimedByMe && !metalArmor;
+        } else if (combo.id === "lightning") {
+          canCastNow = isUnlocked && rivalIds.length > 0;
+        } else if (combo.id === "mist") {
+          canCastNow = isUnlocked && rivalIds.length > 0;
+        }
+
+        const entry = document.createElement("div");
+        entry.className = "fusion-spell-entry";
+
+        const badge = document.createElement("div");
+        badge.className = "fusion-spell-element-badge";
+        badge.textContent = `${combo.elementLabel} · ${ELEMENT_DISPLAY_NAMES[combo.pair[0]]} + ${ELEMENT_DISPLAY_NAMES[combo.pair[1]]}`;
+
+        const triggerBtn = document.createElement("button");
+        triggerBtn.type = "button";
+        triggerBtn.className = "fusion-spell-trigger";
+        triggerBtn.textContent = combo.spellName;
+        triggerBtn.disabled = !canCastNow;
+        triggerBtn.addEventListener("click", () => {
+          closeFusionTableModal();
+          closeSpellModal();
+          startShakeInvocation({
+            spellKey: `fusion_${combo.id}`,
+            spellLabel: `${combo.spellName} (${combo.elementLabel})`,
+            cellIndex,
+            themeClass: combo.themeClass,
+            glyphs: combo.glyphs,
+            promptText: `Agita para canalizar ${combo.spellName} (${combo.elementLabel})`,
+            onConfirmed: async () => {
+              await executeHybridSpell(combo, cellIndex);
+            }
+          });
+        });
+
+        const desc = document.createElement("div");
+        desc.className = "fusion-spell-desc";
+        desc.textContent = combo.description;
+
+        entry.appendChild(badge);
+        entry.appendChild(triggerBtn);
+        entry.appendChild(desc);
+        fusionSpellsList.appendChild(entry);
+      });
+
+      fusionTableBackdrop.classList.add("open");
+    }
+
+    function closeFusionTableModal() {
+      fusionTableBackdrop.classList.remove("open");
+    }
+
+    function closeSpellModal() {
+      spellModalBackdrop.classList.remove("open");
+      selectedSpellCellIndex = null;
+    }
+
+    spellModalBackdrop.addEventListener("click", (e) => {
+      if (e.target === spellModalBackdrop) closeSpellModal();
+    });
+
+    btnCombineElements.addEventListener("click", () => {
+      openFusionTableModal();
+    });
+
+    btnCloseFusionTable.addEventListener("click", () => {
+      closeFusionTableModal();
+    });
+
+    fusionTableBackdrop.addEventListener("click", (e) => {
+      if (e.target === fusionTableBackdrop) closeFusionTableModal();
+    });
+
+    function clearThemeEffects() {
+      themeFxLayer.innerHTML = "";
+      castShakeOverlay.classList.remove(
+        "theme-water",
+        "theme-fire",
+        "theme-air",
+        "theme-earth",
+        "theme-arcane",
+        "theme-fusion-plant",
+        "theme-fusion-metal",
+        "theme-fusion-lightning",
+        "theme-fusion-mist",
+        "arcane-azul",
+        "arcane-morado",
+        "arcane-naranja",
+        "casting-burst"
+      );
+      arcaneGlassVeil.style.display = "none";
+    }
+
+    function populateThemeAnimations(themeType, arcaneColor = "azul") {
+      clearThemeEffects();
+
+      if (themeType === "water") {
+        castShakeOverlay.classList.add("theme-water");
+        for (let i = 0; i < 14; i++) {
+          const b = document.createElement("span");
+          b.className = "water-bubble-fx";
+          const sz = 10 + (i % 4) * 9;
+          b.style.width = `${sz}px`;
+          b.style.height = `${sz}px`;
+          b.style.left = `${(i * 7.3 + 3) % 94}%`;
+          b.style.setProperty("--dur", `${3.4 + (i % 4) * 0.9}s`);
+          b.style.setProperty("--delay", `${(i % 5) * -0.7}s`);
+          themeFxLayer.appendChild(b);
+        }
+        for (let i = 0; i < 16; i++) {
+          const s = document.createElement("span");
+          s.className = "snow-flake-fx";
+          const sz = 4 + (i % 3) * 3;
+          s.style.width = `${sz}px`;
+          s.style.height = `${sz}px`;
+          s.style.left = `${(i * 6.4 + 2) % 96}%`;
+          s.style.setProperty("--dur", `${4.2 + (i % 4) * 1.1}s`);
+          s.style.setProperty("--delay", `${(i % 6) * -0.8}s`);
+          themeFxLayer.appendChild(s);
+        }
+        for (let i = 0; i < 6; i++) {
+          const ice = document.createElement("span");
+          ice.className = "ice-shard-fx";
+          ice.style.left = `${10 + i * 16}%`;
+          ice.style.top = `${14 + (i % 3) * 26}%`;
+          themeFxLayer.appendChild(ice);
+        }
+      } else if (themeType === "fire") {
+        castShakeOverlay.classList.add("theme-fire");
+        for (let i = 0; i < 6; i++) {
+          const flame = document.createElement("span");
+          flame.className = "fire-flame-tongue";
+          flame.style.left = `${4 + i * 17}%`;
+          flame.style.setProperty("--w", `${75 + (i % 3) * 32}px`);
+          flame.style.setProperty("--h", `${140 + (i % 3) * 45}px`);
+          flame.style.setProperty("--dur", `${1.8 + (i % 3) * 0.5}s`);
+          flame.style.setProperty("--delay", `${i * -0.35}s`);
+          themeFxLayer.appendChild(flame);
+        }
+        for (let i = 0; i < 24; i++) {
+          const sp = document.createElement("span");
+          sp.className = "fire-spark-fx";
+          sp.style.left = `${(i * 4.2 + 1) % 98}%`;
+          sp.style.setProperty("--drift", `${(i % 2 === 0 ? 1 : -1) * (14 + (i % 4) * 10)}px`);
+          sp.style.setProperty("--dur", `${2.1 + (i % 4) * 0.65}s`);
+          sp.style.setProperty("--delay", `${(i % 6) * -0.45}s`);
+          themeFxLayer.appendChild(sp);
+        }
+      } else if (themeType === "air") {
+        castShakeOverlay.classList.add("theme-air");
+        for (let i = 0; i < 18; i++) {
+          const line = document.createElement("span");
+          line.className = "wind-line-fx";
+          line.style.top = `${5 + i * 5.2}%`;
+          line.style.setProperty("--len", `${95 + (i % 4) * 55}px`);
+          line.style.setProperty("--thick", `${1.8 + (i % 3) * 1.1}px`);
+          line.style.setProperty("--dur", `${1.15 + (i % 4) * 0.35}s`);
+          line.style.setProperty("--delay", `${(i % 5) * -0.28}s`);
+          themeFxLayer.appendChild(line);
+        }
+      } else if (themeType === "earth") {
+        castShakeOverlay.classList.add("theme-earth");
+        const crackAngles = [-24, 18, -42, 32, 8];
+        crackAngles.forEach((deg, idx) => {
+          const crack = document.createElement("span");
+          crack.className = "earth-crack-fx";
+          crack.style.left = `${12 + idx * 18}%`;
+          crack.style.top = `${20 + ((idx * 23) % 65)}%`;
+          crack.style.transform = `rotate(${deg}deg)`;
+          themeFxLayer.appendChild(crack);
+        });
+        for (let i = 0; i < 9; i++) {
+          const st = document.createElement("span");
+          st.className = "earth-stone-fx";
+          st.style.left = `${8 + i * 10.5}%`;
+          st.style.top = `${16 + ((i * 19) % 68)}%`;
+          st.style.setProperty("--sz", `${16 + (i % 3) * 10}px`);
+          st.style.setProperty("--rot", `${(i - 4) * 16}deg`);
+          st.style.setProperty("--dur", `${2.1 + (i % 3) * 0.6}s`);
+          st.style.setProperty("--delay", `${i * -0.3}s`);
+          themeFxLayer.appendChild(st);
+        }
+        for (let i = 0; i < 18; i++) {
+          const dust = document.createElement("span");
+          dust.className = "earth-dust-fx";
+          dust.style.left = `${(i * 5.6 + 2) % 96}%`;
+          dust.style.top = `${45 + (i % 5) * 11}%`;
+          dust.style.setProperty("--sz", `${5 + (i % 3) * 4}px`);
+          dust.style.setProperty("--dx", `${(i % 2 === 0 ? 1 : -1) * (20 + (i % 3) * 16)}px`);
+          dust.style.setProperty("--dy", `${-45 - (i % 4) * 22}px`);
+          dust.style.setProperty("--dur", `${3.2 + (i % 4) * 0.75}s`);
+          dust.style.setProperty("--delay", `${(i % 5) * -0.65}s`);
+          themeFxLayer.appendChild(dust);
+        }
+      } else if (themeType === "fusion-plant") {
+        castShakeOverlay.classList.add("theme-fusion-plant");
+        const stemConfigs = [
+          { left: "4%", h: "52vh", w: "8px", rot: "11deg", sway: "2.2deg" },
+          { left: "13%", h: "38vh", w: "6px", rot: "5deg", sway: "-2deg" },
+          { left: "22%", h: "60vh", w: "9px", rot: "14deg", sway: "2.5deg" },
+          { left: "33%", h: "42vh", w: "7px", rot: "-4deg", sway: "1.8deg" },
+          { left: "46%", h: "55vh", w: "8px", rot: "3deg", sway: "-2.2deg" },
+          { left: "58%", h: "44vh", w: "7px", rot: "-8deg", sway: "2.1deg" },
+          { left: "69%", h: "62vh", w: "9px", rot: "-13deg", sway: "-2.4deg" },
+          { left: "80%", h: "40vh", w: "6px", rot: "-6deg", sway: "1.9deg" },
+          { left: "90%", h: "54vh", w: "8px", rot: "-12deg", sway: "-2.3deg" }
+        ];
+        stemConfigs.forEach((sc, i) => {
+          const stem = document.createElement("span");
+          stem.className = "fusion-fx-plant-stem";
+          stem.style.left = sc.left;
+          stem.style.setProperty("--sh", sc.h);
+          stem.style.setProperty("--sw", sc.w);
+          stem.style.setProperty("--srot", sc.rot);
+          stem.style.setProperty("--ssway", sc.sway);
+          stem.style.setProperty("--fdur", `${3.8 + (i % 4) * 0.65}s`);
+          stem.style.setProperty("--fdelay", `${i * -0.45}s`);
+
+          const thornCount = 5;
+          for (let t = 0; t < thornCount; t++) {
+            const thorn = document.createElement("span");
+            const side = (t + i) % 2 === 0 ? "thorn-left" : "thorn-right";
+            thorn.className = `fusion-fx-plant-thorn ${side}`;
+            thorn.style.top = `${12 + t * 17}%`;
+            stem.appendChild(thorn);
+          }
+          themeFxLayer.appendChild(stem);
+        });
+        const vineConfigs = [
+          { left: "-40px", top: "-30px", w: "230px", h: "230px", rot: "14deg" },
+          { right: "-45px", top: "10%", w: "210px", h: "250px", rot: "-22deg" },
+          { left: "12%", bottom: "-50px", w: "250px", h: "190px", rot: "8deg" },
+          { right: "8%", bottom: "-40px", w: "220px", h: "210px", rot: "-16deg" },
+          { left: "34%", top: "-55px", w: "190px", h: "180px", rot: "25deg" }
+        ];
+        vineConfigs.forEach((vc, i) => {
+          const vine = document.createElement("span");
+          vine.className = "fusion-fx-plant-vine";
+          if (vc.left !== undefined) vine.style.left = vc.left;
+          if (vc.right !== undefined) vine.style.right = vc.right;
+          if (vc.top !== undefined) vine.style.top = vc.top;
+          if (vc.bottom !== undefined) vine.style.bottom = vc.bottom;
+          vine.style.setProperty("--vw", vc.w);
+          vine.style.setProperty("--vh", vc.h);
+          vine.style.setProperty("--vrot", vc.rot);
+          vine.style.setProperty("--fdur", `${4.4 + (i % 3) * 0.9}s`);
+          vine.style.setProperty("--fdelay", `${i * -0.65}s`);
+          themeFxLayer.appendChild(vine);
+        });
+        for (let i = 0; i < 16; i++) {
+          const leaf = document.createElement("span");
+          leaf.className = "fusion-fx-plant-leaf";
+          leaf.style.left = `${6 + ((i * 6.2) % 88)}%`;
+          leaf.style.top = `${10 + ((i * 19) % 78)}%`;
+          leaf.style.setProperty("--lw", `${18 + (i % 3) * 8}px`);
+          leaf.style.setProperty("--lh", `${10 + (i % 2) * 5}px`);
+          leaf.style.setProperty("--lrot", `${(i % 2 === 0 ? 1 : -1) * (20 + (i % 4) * 14)}deg`);
+          leaf.style.setProperty("--lx", `${(i % 2 === 0 ? 1 : -1) * (10 + (i % 3) * 8)}px`);
+          leaf.style.setProperty("--ly", `${-12 - (i % 3) * 8}px`);
+          leaf.style.setProperty("--fdur", `${3.6 + (i % 4) * 0.7}s`);
+          leaf.style.setProperty("--fdelay", `${(i % 5) * -0.55}s`);
+          themeFxLayer.appendChild(leaf);
+        }
+        for (let i = 0; i < 18; i++) {
+          const spore = document.createElement("span");
+          spore.className = "fusion-fx-plant-spore";
+          spore.style.left = `${8 + ((i * 5.3) % 86)}%`;
+          spore.style.top = `${28 + ((i * 17) % 62)}%`;
+          spore.style.setProperty("--psz", `${5 + (i % 3) * 3}px`);
+          spore.style.setProperty("--px", `${(i % 2 === 0 ? 1 : -1) * (10 + (i % 3) * 9)}px`);
+          spore.style.setProperty("--fdur", `${3.1 + (i % 4) * 0.65}s`);
+          spore.style.setProperty("--fdelay", `${(i % 6) * -0.5}s`);
+          themeFxLayer.appendChild(spore);
+        }
+      } else if (themeType === "fusion-metal") {
+        castShakeOverlay.classList.add("theme-fusion-metal");
+        const ringConfigs = [
+          { size: "150px", bw: "2px", style: "solid", spin: "metalRingSpinCW", dur: "11s", delay: "0s" },
+          { size: "235px", bw: "2px", style: "dashed", spin: "metalRingSpinCCW", dur: "16s", delay: "-2.5s" },
+          { size: "320px", bw: "1.5px", style: "dotted", spin: "metalRingSpinCW", dur: "22s", delay: "-4s" },
+          { size: "405px", bw: "2px", style: "dashed", spin: "metalRingSpinCCW", dur: "28s", delay: "-6s" }
+        ];
+        ringConfigs.forEach((rc) => {
+          const ring = document.createElement("span");
+          ring.className = "fusion-fx-metal-ring";
+          ring.style.setProperty("--mrw", rc.size);
+          ring.style.setProperty("--mrbw", rc.bw);
+          ring.style.setProperty("--mrstyle", rc.style);
+          ring.style.setProperty("--mrspin", rc.spin);
+          ring.style.setProperty("--mrdur", rc.dur);
+          ring.style.setProperty("--mrdelay", rc.delay);
+          themeFxLayer.appendChild(ring);
+        });
+
+        const squarePositions = [
+          { left: "8%", top: "10%", sz: "74px", rot: "-10deg" },
+          { left: "72%", top: "9%", sz: "86px", rot: "14deg" },
+          { left: "6%", top: "68%", sz: "82px", rot: "8deg" },
+          { left: "74%", top: "66%", sz: "78px", rot: "-12deg" },
+          { left: "38%", top: "6%", sz: "64px", rot: "5deg" },
+          { left: "40%", top: "78%", sz: "68px", rot: "-8deg" },
+          { left: "12%", top: "38%", sz: "58px", rot: "16deg" },
+          { left: "78%", top: "38%", sz: "62px", rot: "-15deg" },
+          { left: "24%", top: "20%", sz: "52px", rot: "-6deg" },
+          { left: "64%", top: "22%", sz: "54px", rot: "9deg" },
+          { left: "22%", top: "62%", sz: "54px", rot: "11deg" },
+          { left: "64%", top: "60%", sz: "52px", rot: "-9deg" }
+        ];
+        squarePositions.forEach((sp, i) => {
+          const plate = document.createElement("span");
+          plate.className = "fusion-fx-metal-plate";
+          plate.style.left = sp.left;
+          plate.style.top = sp.top;
+          plate.style.setProperty("--mw", sp.sz);
+          plate.style.setProperty("--mh", sp.sz);
+          plate.style.setProperty("--msrot", sp.rot);
+          plate.style.setProperty("--fdur", `${2.8 + (i % 4) * 0.55}s`);
+          plate.style.setProperty("--fdelay", `${i * -0.35}s`);
+          themeFxLayer.appendChild(plate);
+        });
+      } else if (themeType === "fusion-lightning") {
+        castShakeOverlay.classList.add("theme-fusion-lightning");
+        for (let i = 0; i < 24; i++) {
+          const bolt = document.createElement("span");
+          bolt.className = "fusion-fx-bolt";
+          bolt.style.left = `${2 + ((i * 4.15) % 95)}%`;
+          bolt.style.top = `${-4 + ((i * 17) % 78)}%`;
+          bolt.style.setProperty("--bw", `${2 + (i % 3) * 1.2}px`);
+          bolt.style.setProperty("--bh", `${110 + (i % 5) * 44}px`);
+          bolt.style.setProperty("--brot", `${(i % 2 === 0 ? 1 : -1) * (10 + (i % 5) * 8)}deg`);
+          bolt.style.setProperty("--fdur", `${1.1 + (i % 4) * 0.35}s`);
+          bolt.style.setProperty("--fdelay", `${(i % 6) * -0.25}s`);
+          themeFxLayer.appendChild(bolt);
+        }
+      } else if (themeType === "fusion-mist") {
+        castShakeOverlay.classList.add("theme-fusion-mist");
+        for (let i = 0; i < 14; i++) {
+          const cloud = document.createElement("span");
+          cloud.className = "fusion-fx-fog-cloud";
+          cloud.style.left = `${-14 + (i * 8.5) % 92}%`;
+          cloud.style.top = `${2 + ((i * 13) % 84)}%`;
+          cloud.style.setProperty("--fw", `${210 + (i % 4) * 75}px`);
+          cloud.style.setProperty("--fh", `${115 + (i % 3) * 52}px`);
+          cloud.style.setProperty("--fdur", `${4.4 + (i % 4) * 0.85}s`);
+          cloud.style.setProperty("--fdelay", `${i * -0.5}s`);
+          themeFxLayer.appendChild(cloud);
+        }
+        for (let i = 0; i < 6; i++) {
+          const band = document.createElement("span");
+          band.className = "fusion-fx-shadow-band";
+          band.style.left = "-18%";
+          band.style.top = `${8 + i * 16}%`;
+          band.style.setProperty("--sbh", `${48 + (i % 3) * 24}px`);
+          band.style.setProperty("--srot", `${(i % 2 === 0 ? -1 : 1) * (6 + (i % 3) * 4)}deg`);
+          band.style.setProperty("--sbdur", `${5.2 + (i % 3) * 1.1}s`);
+          band.style.setProperty("--sbdelay", `${i * -0.85}s`);
+          themeFxLayer.appendChild(band);
+        }
+        for (let i = 0; i < 8; i++) {
+          const vig = document.createElement("span");
+          vig.className = "fusion-fx-shadow-vignette";
+          vig.style.left = `${4 + (i * 13) % 78}%`;
+          vig.style.top = `${8 + ((i * 21) % 72)}%`;
+          vig.style.setProperty("--svw", `${150 + (i % 3) * 65}px`);
+          vig.style.setProperty("--svh", `${150 + (i % 3) * 65}px`);
+          vig.style.setProperty("--svdur", `${4.6 + (i % 4) * 0.8}s`);
+          vig.style.setProperty("--svdelay", `${i * -0.6}s`);
+          themeFxLayer.appendChild(vig);
+        }
+      } else {
+        const validColor = ARCANE_COLORS.includes(arcaneColor) ? arcaneColor : "azul";
+        castShakeOverlay.classList.add("theme-arcane", `arcane-${validColor}`);
+        arcaneGlassVeil.style.display = "block";
+        const runes = ["✦", "✧", "◈", "❖", "✺", "✹"];
+        for (let i = 0; i < 14; i++) {
+          const r = document.createElement("span");
+          r.className = "arcane-floating-rune";
+          r.textContent = runes[i % runes.length];
+          r.style.left = `${8 + ((i * 7.2) % 86)}%`;
+          r.style.top = `${10 + ((i * 13) % 78)}%`;
+          r.style.setProperty("--rsz", `${1.2 + (i % 3) * 0.45}rem`);
+          r.style.setProperty("--rx", `${(i % 2 === 0 ? 1 : -1) * (14 + (i % 3) * 10)}px`);
+          r.style.setProperty("--ry", `${(i % 3 === 0 ? -1 : 1) * (16 + (i % 3) * 12)}px`);
+          r.style.setProperty("--dur", `${3.8 + (i % 4) * 0.8}s`);
+          r.style.setProperty("--delay", `${(i % 5) * -0.6}s`);
+          themeFxLayer.appendChild(r);
+        }
+      }
+    }
+
+    function cleanupShakeListeners() {
+      clearTimeout(shakeFallbackTimeout);
+      shakeFallbackTimeout = null;
+      if (motionShakeHandler) {
+        window.removeEventListener("devicemotion", motionShakeHandler);
+        motionShakeHandler = null;
+      }
+    }
+
+    function hideShakeOverlay(withBurst = false) {
+      cleanupShakeListeners();
+      pendingSpellAction = null;
+      isCastingTriggered = false;
+      castFallbackBtn.classList.remove("visible");
+
+      if (!castShakeOverlay.classList.contains("active")) {
+        cancelOverlayExit(castShakeOverlay);
+        clearThemeEffects();
+        return;
+      }
+
+      animateOverlayOut(castShakeOverlay, () => {
+        clearThemeEffects();
+        flushPostOverlayNotifications();
+      });
+    }
+
+    async function triggerConfirmedSpellCast() {
+      if (isCastingTriggered || !pendingSpellAction) return;
+      isCastingTriggered = true;
+      cleanupShakeListeners();
+
+      const actionToRun = pendingSpellAction;
+      pendingSpellAction = null;
+      castFallbackBtn.classList.remove("visible");
+      castShakePromptEl.textContent = "¡Hechizo desatado!";
+
+      animateOverlayOut(castShakeOverlay, () => {
+        clearThemeEffects();
+      });
+      isCastingTriggered = false;
+      try {
+        await actionToRun.onConfirmed();
+      } catch (err) {
+        console.error("Error ejecutando hechizo confirmado:", err);
+      }
+      flushPostOverlayNotifications();
+    }
+
+    function startShakeInvocation({ spellKey, spellLabel, cellIndex = null, themeClass = "theme-arcane", glyphs = "✦ ✧ ✦", promptText = "Agita para lanzar el hechizo", fallbackBtnText = "Lanzar Hechizo", fallbackDelayMs = 2200, onConfirmed, broadcastEvent = true, customEventPayload = null }) {
+      hideShakeOverlay(false);
+      pendingSpellAction = { spellKey, spellLabel, cellIndex, onConfirmed };
+      isCastingTriggered = false;
+
+      const myColor = latestMatchData?.players?.[currentPlayerId]?.color || "azul";
+      populateThemeAnimations(themeClass.replace("theme-", ""), myColor);
+      castRuneGlyphsEl.textContent = glyphs;
+      castShakeTitleEl.textContent = spellLabel;
+      castShakePromptEl.textContent = promptText;
+      castFallbackBtn.textContent = fallbackBtnText;
+      castFallbackBtn.classList.remove("visible");
+      cancelOverlayExit(castShakeOverlay);
+      castShakeOverlay.classList.remove("overlay-exiting", "casting-burst");
+      castShakeOverlay.classList.add("active");
+
+      if (broadcastEvent && currentMatchId && currentPlayerId) {
+        const eventObj = customEventPayload || {
+          id: createEventId("cast"),
+          casterId: currentPlayerId,
+          casterName: latestMatchData?.players?.[currentPlayerId]?.name || "Un mago",
+          casterColor: myColor,
+          spellKey,
+          spellLabel,
+          themeClass,
+          glyphs,
+          cellIndex,
+          createdAt: Date.now()
+        };
+        if (eventObj.id) handledSpellCastEventId = eventObj.id;
+        updateDoc(doc(db, "duelos", currentMatchId), {
+          spellCastEvent: eventObj,
+          updatedAt: serverTimestamp()
+        }).catch((err) => console.error("Error publicando invocacion:", err));
+      }
+
+      let lastX = null;
+      let lastY = null;
+      let lastZ = null;
+      let shakeScore = 0;
+
+      const handleMotion = (event) => {
+        if (isCastingTriggered) return;
+        const acc = event.accelerationIncludingGravity || event.acceleration;
+        if (!acc) return;
+        const x = acc.x ?? 0;
+        const y = acc.y ?? 0;
+        const z = acc.z ?? 0;
+
+        if (lastX !== null) {
+          const delta = Math.abs(x - lastX) + Math.abs(y - lastY) + Math.abs(z - lastZ);
+          if (delta > 16) {
+            shakeScore += delta;
+            if (shakeScore >= 42) {
+              triggerConfirmedSpellCast();
+              return;
+            }
+          }
+        }
+        lastX = x;
+        lastY = y;
+        lastZ = z;
+      };
+
+      const enableMotionSensor = () => {
+        if (typeof window.DeviceMotionEvent === "undefined") {
+          castFallbackBtn.classList.add("visible");
+          return;
+        }
+        if (typeof window.DeviceMotionEvent.requestPermission === "function") {
+          window.DeviceMotionEvent.requestPermission()
+            .then((permissionState) => {
+              if (permissionState === "granted") {
+                motionShakeHandler = handleMotion;
+                window.addEventListener("devicemotion", motionShakeHandler);
+              } else {
+                castFallbackBtn.classList.add("visible");
+              }
+            })
+            .catch(() => {
+              castFallbackBtn.classList.add("visible");
+            });
+        } else {
+          motionShakeHandler = handleMotion;
+          window.addEventListener("devicemotion", motionShakeHandler);
+        }
+      };
+
+      enableMotionSensor();
+      shakeFallbackTimeout = setTimeout(() => {
+        if (!isCastingTriggered && pendingSpellAction) {
+          castFallbackBtn.classList.add("visible");
+        }
+      }, fallbackDelayMs);
+    }
+
+    castFallbackBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      triggerConfirmedSpellCast();
+    });
+
+    function triggerPendingSpellExecution() {
+      return triggerConfirmedSpellCast();
+    }
+
+    function openThemedShakeOverlay(theme, onConfirmed) {
+      if (theme === "air") {
+        startShakeInvocation({
+          spellKey: "air",
+          spellLabel: "Hechizo de Aire",
+          themeClass: "theme-air",
+          glyphs: "🌪 ✦ 🌪",
+          promptText: "Agita para invocar la rafaga y mover la casilla",
+          fallbackBtnText: "Invocar Rafaga",
+          fallbackDelayMs: 5000,
+          broadcastEvent: false,
+          onConfirmed
+        });
+      }
+    }
+
+    function syncIncomingSpellCastOverlay(matchData) {
+      const ev = matchData?.spellCastEvent;
+      if (!ev?.id || ev.id === handledSpellCastEventId) return;
+      handledSpellCastEventId = ev.id;
+      if (ev.casterId === currentPlayerId) return;
+
+      const myPlayer = matchData?.players?.[currentPlayerId];
+      const deferEffects = isPlayerFrozenNow(myPlayer) || isAnyBlockingOverlayOpen();
+
+      let pendingAirSwapIndices = null;
+      if (ev.spellTheme === "air" && Array.isArray(ev.swappedIndices) && ev.swappedIndices.length === 2) {
+        pendingAirSwapIndices = ev.swappedIndices;
+      }
+
+      const applyAirSwapBlinkNow = () => {
+        if (pendingAirSwapIndices && pendingAirSwapIndices.length === 2) {
+          const [aIdx, bIdx] = pendingAirSwapIndices;
+          airBlinkCellIndices.set(aIdx, bIdx);
+          airBlinkCellIndices.set(bIdx, aIdx);
+          if (!deferEffects && latestMatchData) {
+            renderBingoGrid(latestMatchData);
+          }
+        }
+      };
+
+      if (isPlayerFrozenNow(myPlayer)) {
+        applyAirSwapBlinkNow();
+        return;
+      }
+
+      const isTargetedAtMe = !Array.isArray(ev.targetIds) || ev.targetIds.includes(currentPlayerId);
+      if (!isTargetedAtMe) {
+        applyAirSwapBlinkNow();
+        return;
+      }
+
+      hideShakeOverlay(false);
+      const tClass = ev.themeClass || (ev.spellTheme === "air" ? "theme-air" : "theme-arcane");
+      populateThemeAnimations(tClass.replace("theme-", ""), ev.casterColor || "azul");
+      castRuneGlyphsEl.textContent = ev.glyphs || (ev.spellTheme === "air" ? "🌪 ✦ 🌪" : "✦ ✧ ✦");
+      castShakeTitleEl.textContent = ev.spellLabel || (ev.spellTheme === "air" ? "Hechizo de Aire" : "Invocacion");
+      castShakePromptEl.textContent =
+        ev.spellTheme === "air" && Array.isArray(ev.swappedIndices) && ev.swappedIndices.length === 2
+          ? `${ev.casterName || "Un mago rival"} ha invocado una rafaga de Aire e intercambiado dos casillas.`
+          : `${ev.casterName || "Un mago rival"} esta lanzando ${ev.spellLabel || "un hechizo"}...`;
+      castFallbackBtn.classList.remove("visible");
+      cancelOverlayExit(castShakeOverlay);
+      castShakeOverlay.classList.remove("overlay-exiting", "casting-burst");
+      castShakeOverlay.classList.add("active");
+
+      setTimeout(() => {
+        if (!pendingSpellAction && castShakeOverlay.classList.contains("active")) {
+          animateOverlayOut(castShakeOverlay, () => {
+            clearThemeEffects();
+            if (ev.spellTheme === "air") {
+              applyAirSwapBlinkNow();
+            }
+            flushPostOverlayNotifications();
+          });
+        }
+      }, 2800);
+    }
+
+    async function tryMarkCellAndCheckLine(cellIndex, { conquer = false } = {}) {
+      if (!currentMatchId || !currentPlayerId || !latestMatchData) return;
+
+      const myPlayer = latestMatchData.players?.[currentPlayerId];
+      if (!myPlayer) return;
+
+      const existingClaim = latestMatchData.cellClaims?.[String(cellIndex)];
+      if (conquer && existingClaim?.playerId) return;
+
+      const updates = { updatedAt: serverTimestamp() };
+      const neutralSet = getNeutralCellIndicesSet(latestMatchData);
+      const { cols, rows } = getGridDimensions(latestMatchData);
+      const prevLines = countCompletedLinesForPlayer(currentPlayerId, cols, rows, latestMatchData);
+
+      const projectedClaims = { ...(latestMatchData.cellClaims || {}) };
+      const playerColor = myPlayer.color || ARCANE_COLORS[0];
+      if (conquer) {
+        projectedClaims[String(cellIndex)] = {
+          playerId: currentPlayerId,
+          playerName: myPlayer.name,
+          color: playerColor
+        };
+      }
+      const projectedMatch = { ...latestMatchData, cellClaims: projectedClaims };
+
+      const nextLines = countCompletedLinesForPlayer(currentPlayerId, cols, rows, projectedMatch);
+      const prevLinesEver = typeof myPlayer.linesEverCount === "number" ? myPlayer.linesEverCount : prevLines;
+      const nextLinesEver = Math.max(prevLinesEver, nextLines);
+      const completedNewLine = nextLines > prevLines;
+
+      const prevConqueredEver = typeof myPlayer.conqueredEverCount === "number" ? myPlayer.conqueredEverCount : 0;
+      const nextConqueredEver = (conquer && !neutralSet.has(cellIndex)) ? prevConqueredEver + 1 : prevConqueredEver;
+
+      const nextCooldownDuration = getArcaneCooldownDurationForPlayer(latestMatchData, currentPlayerId);
+      const nextArcaneReadyAt = conquer ? Date.now() + nextCooldownDuration : (myPlayer.arcaneReadyAt || 0);
+
+      const nextScore = nextConqueredEver + nextLinesEver * 2;
+
+      updates[`players.${currentPlayerId}.linesEverCount`] = nextLinesEver;
+      updates[`players.${currentPlayerId}.score`] = nextScore;
+
+      if (conquer) {
+        updates[`cellClaims.${cellIndex}`] = {
+          playerId: currentPlayerId,
+          playerName: myPlayer.name,
+          color: playerColor
+        };
+        if (latestMatchData?.plantCells?.[String(cellIndex)]) {
+          updates[`plantCells.${cellIndex}`] = null;
+        }
+        updates[`players.${currentPlayerId}.conqueredEverCount`] = nextConqueredEver;
+        updates[`players.${currentPlayerId}.usedSpells.arcane`] = true;
+        updates[`players.${currentPlayerId}.arcaneReadyAt`] = nextArcaneReadyAt;
+        updates[`players.${currentPlayerId}.arcaneCooldownDuration`] = nextCooldownDuration;
+        arcaneConquestCellIndices.add(cellIndex);
+        pendingPostOverlaySpellCells.add(cellIndex);
+      }
+
+      if (completedNewLine) {
+        updates.lineAnnouncementEvent = {
+          id: createEventId("line"),
+          playerId: currentPlayerId,
+          playerName: myPlayer.name || "Un mago",
+          color: myPlayer.color || "azul",
+          lineCount: nextLines,
+          createdAt: Date.now()
+        };
+      }
+
+      try {
+        await updateDoc(doc(db, "duelos", currentMatchId), updates);
+        if (completedNewLine) {
+          showArcaneLineBanner(myPlayer.name || "Un mago", myPlayer.color || "azul");
+        }
+        if (conquer) {
+          await executeArcaneSpell(cellIndex);
+        }
+      } catch (err) {
+        console.error("Error actualizando casilla:", err);
+      }
+    }
+
+    btnArcaneSpell.addEventListener("click", async () => {
+      if (selectedSpellCellIndex === null || !latestMatchData) return;
+      const myPlayer = latestMatchData.players?.[currentPlayerId];
+      if (!isArcaneSpellReady(myPlayer)) return;
+      const cellIndex = selectedSpellCellIndex;
+      const existingClaim = latestMatchData.cellClaims?.[String(cellIndex)];
+      if (existingClaim?.playerId || getActiveEarthLock(latestMatchData, cellIndex)) return;
+
+      closeSpellModal();
+      startShakeInvocation({
+        spellKey: "arcane",
+        spellLabel: "Magia Arcana",
+        cellIndex,
+        themeClass: "theme-arcane",
+        glyphs: "✦ ✧ ✦",
+        promptText: "Agita para conquistar la casilla con tu magia arcana",
+        onConfirmed: async () => {
+          await tryMarkCellAndCheckLine(cellIndex, { conquer: true });
+        }
+      });
+    });
+
+    function populateWaterTargetFxLayer() {
+      if (!waterTargetFxLayer || waterTargetFxLayer.childElementCount > 0) return;
+      for (let i = 0; i < 12; i++) {
+        const b = document.createElement("span");
+        b.className = "water-bubble-fx";
+        const sz = 10 + (i % 4) * 8;
+        b.style.width = `${sz}px`;
+        b.style.height = `${sz}px`;
+        b.style.left = `${(i * 8.4 + 3) % 94}%`;
+        b.style.setProperty("--dur", `${3.6 + (i % 4) * 0.85}s`);
+        b.style.setProperty("--delay", `${(i % 5) * -0.65}s`);
+        waterTargetFxLayer.appendChild(b);
+      }
+      for (let i = 0; i < 16; i++) {
+        const s = document.createElement("span");
+        s.className = "snow-flake-fx";
+        const sz = 4 + (i % 3) * 3;
+        s.style.width = `${sz}px`;
+        s.style.height = `${sz}px`;
+        s.style.left = `${(i * 6.2 + 2) % 96}%`;
+        s.style.setProperty("--dur", `${4.2 + (i % 4) * 1.0}s`);
+        s.style.setProperty("--delay", `${(i % 6) * -0.75}s`);
+        waterTargetFxLayer.appendChild(s);
+      }
+      for (let i = 0; i < 6; i++) {
+        const ice = document.createElement("span");
+        ice.className = "ice-shard-fx";
+        ice.style.left = `${9 + i * 16.5}%`;
+        ice.style.top = `${14 + (i % 3) * 28}%`;
+        waterTargetFxLayer.appendChild(ice);
+      }
+    }
+
+    function openWaterTargetSelector(rivalIds, cellIndex) {
+      pendingWaterTargetIds = rivalIds;
+      waterTargetListEl.innerHTML = "";
+      populateWaterTargetFxLayer();
+
+      rivalIds.forEach((rid) => {
+        const rivalName = latestMatchData?.players?.[rid]?.name || "Mago rival";
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "water-target-btn";
+        btn.textContent = `Congelar a ${rivalName}`;
+        btn.addEventListener("click", () => {
+          const chosenTargetIds = [rid];
+          pendingWaterTargetIds = null;
+          animateOverlayOut(waterTargetOverlay, () => {
+            flushPostOverlayNotifications();
+          });
+          startShakeInvocation({
+            spellKey: "water",
+            spellLabel: "Agua - Congelar Rival",
+            cellIndex,
+            themeClass: "theme-water",
+            glyphs: "❄ 💧 ❄",
+            promptText: `Agita para congelar a ${rivalName} durante 1:30`,
+            onConfirmed: async () => {
+              await executeWaterFreeze(chosenTargetIds, cellIndex);
+            }
+          });
+        });
+        waterTargetListEl.appendChild(btn);
+      });
+
+      cancelOverlayExit(waterTargetOverlay);
+      waterTargetOverlay.classList.remove("overlay-exiting");
+      waterTargetOverlay.classList.add("active");
+    }
+
+    btnWaterSpell.addEventListener("click", async () => {
+      if (selectedSpellCellIndex === null || !latestMatchData) return;
+      const myPlayer = latestMatchData.players?.[currentPlayerId];
+      if (!myPlayer || getPlayerElementCharges(myPlayer).water < 3 || isElementShortCircuited(myPlayer, "water")) return;
+
+      const rivalIds = getRivalIds(latestMatchData);
+      if (rivalIds.length === 0) return;
+
+      const cellIndex = selectedSpellCellIndex;
+      closeSpellModal();
+
+      if (rivalIds.length > 1) {
+        openWaterTargetSelector(rivalIds, cellIndex);
+        return;
+      }
+
+      startShakeInvocation({
+        spellKey: "water",
+        spellLabel: "Agua - Congelar Rival",
+        cellIndex,
+        themeClass: "theme-water",
+        glyphs: "❄ 💧 ❄",
+        promptText: "Agita para invocar la congelacion de Agua",
+        onConfirmed: async () => {
+          await executeWaterFreeze(rivalIds, cellIndex);
+        }
+      });
+    });
+
+    async function executeWaterFreeze(targetIds, cellIndex = null) {
+      if (!currentMatchId || !currentPlayerId) return;
+      const frozenUntil = Date.now() + 90000;
+      const updates = {
+        [`players.${currentPlayerId}.elementCharges.water`]: 0,
+        [`players.${currentPlayerId}.usedSpells.water`]: true,
+        updatedAt: serverTimestamp()
+      };
+      (targetIds || []).forEach((tid) => {
+        updates[`players.${tid}.frozenUntil`] = frozenUntil;
+      });
+      try {
+        await updateDoc(doc(db, "duelos", currentMatchId), updates);
+        if (typeof cellIndex === "number" && cellIndex >= 0) {
+          pendingPostOverlaySpellCells.add(cellIndex);
+        }
+      } catch (err) {
+        console.error("Error ejecutando hechizo de Agua:", err);
+      }
+    }
+
+    // =========================================================================
+    // SISTEMA DEL HECHIZO DE AIRE ("AIRE - MOVER CELDA")
+    // =========================================================================
+    function cancelAirMode() {
+      airSourceCellIndex = null;
+      if (latestMatchData) {
+        renderBingoGrid(latestMatchData);
+      }
+    }
+
+    function castAirSpell() {
+      if (selectedSpellCellIndex === null || !latestMatchData) return;
+      const myPlayer = latestMatchData.players?.[currentPlayerId];
+      if (!myPlayer) return;
+      if (getPlayerElementCharges(myPlayer).air < 3 || isElementShortCircuited(myPlayer, "air")) return;
+
+      const idx = selectedSpellCellIndex;
+      if (getActiveEarthLock(latestMatchData, idx) || getActiveMetalArmor(latestMatchData, idx)) return;
+
+      closeSpellModal();
+      openThemedShakeOverlay("air", () => executeAirSpell(idx));
+    }
+
+    function executeAirSpell(idx) {
+      if (!latestMatchData || typeof idx !== "number") return;
+      if (getActiveEarthLock(latestMatchData, idx) || getActiveMetalArmor(latestMatchData, idx)) return;
+      airSourceCellIndex = idx;
+      selectedSpellCellIndex = null;
+      renderBingoGrid(latestMatchData);
+    }
+
+    async function completeAirMove(targetIndex) {
+      if (!currentMatchId || !currentPlayerId || !latestMatchData) return;
+      const sourceIndex = airSourceCellIndex;
+
+      if (
+        typeof sourceIndex !== "number" ||
+        typeof targetIndex !== "number" ||
+        sourceIndex === targetIndex
+      ) {
+        cancelAirMode();
+        return;
+      }
+
+      const myPlayer = latestMatchData.players?.[currentPlayerId];
+      if (!myPlayer || getPlayerElementCharges(myPlayer).air < 3 || isElementShortCircuited(myPlayer, "air")) {
+        cancelAirMode();
+        return;
+      }
+
+      if (
+        getActiveEarthLock(latestMatchData, sourceIndex) ||
+        getActiveEarthLock(latestMatchData, targetIndex) ||
+        getActiveMetalArmor(latestMatchData, sourceIndex) ||
+        getActiveMetalArmor(latestMatchData, targetIndex)
+      ) {
+        cancelAirMode();
+        return;
+      }
+
+      const { total } = getGridDimensions(latestMatchData);
+      const newBoard = Array.isArray(myPlayer.board) && myPlayer.board.length === total
+        ? [...myPlayer.board]
+        : (Array.isArray(latestMatchData.sharedBoard) && latestMatchData.sharedBoard.length === total
+          ? [...latestMatchData.sharedBoard]
+          : [...EUROVISION_EVENTS_32.slice(0, total)]);
+
+      const tempText = newBoard[sourceIndex];
+      newBoard[sourceIndex] = newBoard[targetIndex];
+      newBoard[targetIndex] = tempText;
+
+      const claims = { ...(latestMatchData.cellClaims || {}) };
+      const sourceClaim = claims[String(sourceIndex)] || null;
+      const targetClaim = claims[String(targetIndex)] || null;
+      if (targetClaim) claims[String(sourceIndex)] = targetClaim;
+      else delete claims[String(sourceIndex)];
+      if (sourceClaim) claims[String(targetIndex)] = sourceClaim;
+      else delete claims[String(targetIndex)];
+
+      const metalArmors = { ...(latestMatchData.metalArmors || {}) };
+      const sourceArmor = metalArmors[String(sourceIndex)] || null;
+      const targetArmor = metalArmors[String(targetIndex)] || null;
+      if (targetArmor) metalArmors[String(sourceIndex)] = targetArmor;
+      else delete metalArmors[String(sourceIndex)];
+      if (sourceArmor) metalArmors[String(targetIndex)] = sourceArmor;
+      else delete metalArmors[String(targetIndex)];
+
+      const plantCells = { ...(latestMatchData.plantCells || {}) };
+      const sourcePlant = plantCells[String(sourceIndex)] || null;
+      const targetPlant = plantCells[String(targetIndex)] || null;
+      if (targetPlant) plantCells[String(sourceIndex)] = targetPlant;
+      else delete plantCells[String(sourceIndex)];
+      if (sourcePlant) plantCells[String(targetIndex)] = sourcePlant;
+      else delete plantCells[String(targetIndex)];
+
+      const projectedMatchData = {
+        ...latestMatchData,
+        cellClaims: claims,
+        plantCells,
+        metalArmors
+      };
+      const newScore = computeWizardPoints(
+        { ...myPlayer, board: newBoard },
+        projectedMatchData,
+        currentPlayerId
+      );
+
+      cancelAirMode();
+      pendingPostOverlaySpellCells.add(sourceIndex);
+      pendingPostOverlaySpellCells.add(targetIndex);
+
+      const spellCastEventId = createEventId("spell_air");
+      handledSpellCastEventId = spellCastEventId;
+
+      const spellCastEvent = {
+        id: spellCastEventId,
+        spellTheme: "air",
+        swappedIndices: [sourceIndex, targetIndex],
+        targetIds: getRivalIds(latestMatchData),
+        casterId: currentPlayerId,
+        casterName: myPlayer.name || "Un mago",
+        casterColor: myPlayer.color || "azul",
+        spellKey: "air",
+        spellLabel: "Hechizo de Aire",
+        themeClass: "theme-air",
+        glyphs: "🌪 ✦ 🌪",
+        createdAt: Date.now()
+      };
+
+      const updates = {
+        sharedBoard: newBoard,
+        cellClaims: claims,
+        plantCells,
+        metalArmors,
+        [`players.${currentPlayerId}.board`]: newBoard,
+        [`players.${currentPlayerId}.score`]: newScore,
+        [`players.${currentPlayerId}.usedSpells.air`]: true,
+        [`players.${currentPlayerId}.elementCharges.air`]: 0,
+        spellCastEvent,
+        updatedAt: serverTimestamp()
+      };
+
+      Object.keys(latestMatchData.players || {}).forEach((pid) => {
+        if (pid === currentPlayerId) return;
+        const pBoard = Array.isArray(latestMatchData.players[pid]?.board)
+          ? [...latestMatchData.players[pid].board]
+          : [...newBoard];
+        const tmp = pBoard[sourceIndex];
+        pBoard[sourceIndex] = pBoard[targetIndex];
+        pBoard[targetIndex] = tmp;
+        updates[`players.${pid}.board`] = pBoard;
+      });
+
+      try {
+        await updateDoc(doc(db, "duelos", currentMatchId), updates);
+        triggerPostOverlayCellEnterExitAnimations();
+      } catch (err) {
+        console.error("Error completando movimiento de Aire:", err);
+        renderBingoGrid(latestMatchData);
+      }
+    }
+
+    btnAirSpell.addEventListener("click", () => {
+      castAirSpell();
+    });
+
+    btnEarthSpell.addEventListener("click", async () => {
+      if (selectedSpellCellIndex === null || !latestMatchData) return;
+      const myPlayer = latestMatchData.players?.[currentPlayerId];
+      if (!myPlayer || getPlayerElementCharges(myPlayer).earth < 3 || isElementShortCircuited(myPlayer, "earth")) return;
+
+      const cellIndex = selectedSpellCellIndex;
+      if (getActiveEarthLock(latestMatchData, cellIndex)) return;
+      if (latestMatchData.cellClaims?.[String(cellIndex)]?.playerId) return;
+
+      closeSpellModal();
+      startShakeInvocation({
+        spellKey: "earth",
+        spellLabel: "Tierra - Bloquear Casilla",
+        cellIndex,
+        themeClass: "theme-earth",
+        glyphs: "✦ ✧ ✦",
+        promptText: "Agita para invocar el escudo de Tierra sobre la casilla",
+        onConfirmed: async () => {
+          const expiresAt = Date.now() + 180000;
+          try {
+            await updateDoc(doc(db, "duelos", currentMatchId), {
+              [`earthLocks.${cellIndex}`]: {
+                playerId: currentPlayerId,
+                playerName: myPlayer.name,
+                expiresAt
+              },
+              [`players.${currentPlayerId}.elementCharges.earth`]: 0,
+              [`players.${currentPlayerId}.usedSpells.earth`]: true,
+              updatedAt: serverTimestamp()
+            });
+            pendingPostOverlaySpellCells.add(cellIndex);
+          } catch (err) {
+            console.error("Error bloqueando casilla con Tierra:", err);
+          }
+        }
+      });
+    });
+
+    btnFireSpell.addEventListener("click", async () => {
+      if (selectedSpellCellIndex === null || !latestMatchData) return;
+      const myPlayer = latestMatchData.players?.[currentPlayerId];
+      if (!myPlayer || getPlayerElementCharges(myPlayer).fire < 3 || isElementShortCircuited(myPlayer, "fire")) return;
+
+      const cellIndex = selectedSpellCellIndex;
+      const claim = latestMatchData.cellClaims?.[String(cellIndex)];
+      if (!claim?.playerId || claim.playerId === currentPlayerId) return;
+      if (getActiveEarthLock(latestMatchData, cellIndex)) return;
+
+      const previousOwnerId = claim.playerId;
+      const hadMetalArmor = Boolean(getActiveMetalArmor(latestMatchData, cellIndex));
+      closeSpellModal();
+
+      startShakeInvocation({
+        spellKey: "fire",
+        spellLabel: "Fuego - Disipar Conquista",
+        cellIndex,
+        themeClass: "theme-fire",
+        glyphs: "🔥 ✦ 🔥",
+        promptText: "Agita para desatar el fuego y disipar la conquista rival",
+        onConfirmed: async () => {
+          const updates = {
+            [`cellClaims.${cellIndex}`]: null,
+            [`players.${currentPlayerId}.elementCharges.fire`]: 0,
+            [`players.${currentPlayerId}.usedSpells.fire`]: true,
+            updatedAt: serverTimestamp()
+          };
+          if (hadMetalArmor) updates[`metalArmors.${cellIndex}`] = null;
+
+          const ownerData = latestMatchData.players?.[previousOwnerId];
+          if (ownerData) {
+            const neutralSet = getNeutralCellIndicesSet(latestMatchData);
+            const remainingClaims = Object.entries(latestMatchData.cellClaims || {})
+              .filter(([idxKey, c]) => Number(idxKey) !== cellIndex && !neutralSet.has(Number(idxKey)) && c && c.playerId === previousOwnerId).length;
+            const ownerConqueredEver = Math.max(
+              typeof ownerData.conqueredEverCount === "number" ? ownerData.conqueredEverCount : 0,
+              remainingClaims
+            );
+            const { cols, rows } = getGridDimensions(latestMatchData);
+            const ownerLines = countCompletedLinesForPlayer(previousOwnerId, cols, rows, latestMatchData);
+            const ownerLinesEver = Math.max(
+              typeof ownerData.linesEverCount === "number" ? ownerData.linesEverCount : 0,
+              ownerLines
+            );
+            updates[`players.${previousOwnerId}.score`] = ownerConqueredEver + ownerLinesEver * 2;
+          }
+
+          try {
+            await updateDoc(doc(db, "duelos", currentMatchId), updates);
+            animatedCellIndices.add(cellIndex);
+            fireBurnCellIndices.add(cellIndex);
+            if (hadMetalArmor) metalMeltCellIndices.add(cellIndex);
+            pendingPostOverlaySpellCells.add(cellIndex);
+          } catch (err) {
+            console.error("Error disipando conquista con Fuego:", err);
+          }
+        }
+      });
+    });
+
+    async function executeHybridSpell(combo, cellIndex) {
+      if (!currentMatchId || !currentPlayerId || !latestMatchData) return;
+      const myPlayer = latestMatchData.players?.[currentPlayerId];
+      if (!myPlayer) return;
+
+      const [elA, elB] = combo.pair;
+      const updates = {
+        [`players.${currentPlayerId}.elementCharges.${elA}`]: 0,
+        [`players.${currentPlayerId}.elementCharges.${elB}`]: 0,
+        [`players.${currentPlayerId}.usedSpells.${elA}`]: true,
+        [`players.${currentPlayerId}.usedSpells.${elB}`]: true,
+        updatedAt: serverTimestamp()
+      };
+
+      if (combo.id === "plant") {
+        updates[`plantCells.${cellIndex}`] = {
+          playerId: currentPlayerId,
+          playerName: myPlayer.name || "Un mago",
+          createdAt: Date.now()
+        };
+      } else if (combo.id === "metal") {
+        updates[`metalArmors.${cellIndex}`] = {
+          playerId: currentPlayerId,
+          playerName: myPlayer.name || "Un mago",
+          createdAt: Date.now()
+        };
+      } else if (combo.id === "lightning") {
+        const rivalIds = getRivalIds(latestMatchData);
+        const shockUntil = Date.now() + 45000;
+        rivalIds.forEach((rid) => {
+          const rPlayer = latestMatchData.players?.[rid];
+          if (!rPlayer) return;
+          const rCharges = getPlayerElementCharges(rPlayer);
+          const fullEls = ELEMENTAL_KEYS.filter((k) => rCharges[k] >= 3);
+          const nonZeroEls = ELEMENTAL_KEYS.filter((k) => rCharges[k] > 0);
+          const pool = fullEls.length > 0 ? fullEls : (nonZeroEls.length > 0 ? nonZeroEls : ELEMENTAL_KEYS);
+          const chosenEl = pool[Math.floor(Math.random() * pool.length)];
+          updates[`players.${rid}.elementCharges.${chosenEl}`] = 0;
+          updates[`players.${rid}.shortCircuitUntil.${chosenEl}`] = shockUntil;
+        });
+      } else if (combo.id === "mist") {
+        const rivalIds = getRivalIds(latestMatchData);
+        const veilUntil = Date.now() + 60000;
+        rivalIds.forEach((rid) => {
+          updates[`players.${rid}.shadowVeilUntil`] = veilUntil;
+        });
+      }
+
+      try {
+        await updateDoc(doc(db, "duelos", currentMatchId), updates);
+        animatedCellIndices.add(cellIndex);
+        if (typeof cellIndex === "number" && cellIndex >= 0) {
+          pendingPostOverlaySpellCells.add(cellIndex);
+        }
+        syncMainPlayerBackgroundEffects(latestMatchData);
+      } catch (err) {
+        console.error("Error ejecutando hechizo combinado:", err);
+      }
+    }
+
+    function getPendingPotionInfo(matchData, playerId) {
+      const ev = matchData?.potionEvent;
+      if (!ev || !ev.requestId || !ev.targetId) return null;
+      if (ev.targetId !== playerId) return null;
+      const pendingByPlayer = matchData?.pendingPotionByPlayer?.[playerId];
+      if (pendingByPlayer && pendingByPlayer.requestId && pendingByPlayer.requestId !== ev.requestId) {
+        return null;
+      }
+      return ev;
+    }
+
+    function createSubtleBubbleEl(idx, travelPx = 140) {
+      const palette = [
+        "rgba(192, 132, 252, 0.36)",
+        "rgba(56, 189, 248, 0.34)",
+        "rgba(244, 114, 182, 0.34)",
+        "rgba(52, 211, 153, 0.34)"
+      ];
+      const b = document.createElement("span");
+      b.className = "potion-subtle-bubble";
+      const sz = 6 + (idx % 4) * 4;
+      b.style.width = `${sz}px`;
+      b.style.height = `${sz}px`;
+      b.style.left = `${(idx * 11.5 + 5) % 92}%`;
+      b.style.setProperty("--psbc", palette[idx % palette.length]);
+      b.style.setProperty("--psbx", `${(idx % 2 === 0 ? 1 : -1) * (6 + (idx % 3) * 5)}px`);
+      b.style.setProperty("--psbtravel", `${travelPx}px`);
+      b.style.setProperty("--psbdur", `${4.6 + (idx % 4) * 0.95}s`);
+      b.style.setProperty("--psbdelay", `${(idx % 5) * -0.8}s`);
+      return b;
+    }
+
+    function syncActivePotionSubtleBubbles(matchData) {
+      const staleScreenLayer = document.getElementById("potion-active-screen-bubbles");
+      if (staleScreenLayer) staleScreenLayer.remove();
+
+      const pills = scoreboardEl.querySelectorAll(".player-pill[data-pid]");
+      pills.forEach((pill) => {
+        const pid = pill.getAttribute("data-pid");
+        const hasPending = Boolean(getPendingPotionInfo(matchData, pid));
+        let pillLayer = pill.querySelector(".potion-active-pill-bubbles");
+        if (hasPending) {
+          if (!pillLayer) {
+            pillLayer = document.createElement("div");
+            pillLayer.className = "potion-active-pill-bubbles";
+            pillLayer.setAttribute("aria-hidden", "true");
+            const pillH = Math.max(48, Math.round(pill.getBoundingClientRect().height || 64));
+            for (let i = 0; i < 5; i++) {
+              pillLayer.appendChild(createSubtleBubbleEl(i + 2, pillH + 14));
+            }
+            pill.appendChild(pillLayer);
+          }
+        } else if (pillLayer) {
+          pillLayer.remove();
+        }
+      });
+    }
+
+    async function acknowledgePendingPotionForCurrentPlayer() {
+      const matchId = currentMatchId;
+      const pid = currentPlayerId;
+      hidePotionOverlay();
+      if (!matchId || !pid) return;
+
+      try {
+        const updates = {
+          [`pendingPotionByPlayer.${pid}`]: null,
+          updatedAt: serverTimestamp()
+        };
+        if (latestMatchData?.potionEvent?.targetId === pid) {
+          updates.potionEvent = null;
+        }
+        await updateDoc(doc(db, "duelos", matchId), updates);
+      } catch (err) {
+        console.error("Error limpiando estado pendiente de pocion en Firestore:", err);
+      }
+    }
+
+    // =========================================================================
+    // SISTEMA NUEVO DE POCIONES / BEBIDAS (RECONSTRUIDO DESDE CERO)
+    // =========================================================================
+    function populatePotionBubbles() {
+      if (!potionBgBubbles || potionBgBubbles.childElementCount > 0) return;
+      const bubbleColors = [
+        "rgba(255, 107, 139, 0.52)",
+        "rgba(56, 189, 248, 0.52)",
+        "rgba(192, 132, 252, 0.52)",
+        "rgba(52, 211, 153, 0.52)",
+        "rgba(251, 191, 36, 0.52)"
+      ];
+      for (let i = 0; i < 20; i++) {
+        const b = document.createElement("span");
+        b.className = "potion-bg-bubble";
+        b.style.left = `${(i * 5.2 + 2) % 95}%`;
+        b.style.setProperty("--pbsz", `${14 + (i % 4) * 11}px`);
+        b.style.setProperty("--pbc", bubbleColors[i % bubbleColors.length]);
+        b.style.setProperty("--pbx", `${(i % 2 === 0 ? 1 : -1) * (12 + (i % 3) * 10)}px`);
+        b.style.setProperty("--pbdur", `${3.8 + (i % 4) * 0.9}s`);
+        b.style.setProperty("--pbdelay", `${(i % 6) * -0.75}s`);
+        potionBgBubbles.appendChild(b);
+      }
+    }
+
+    function clearPotionTimers() {
+      clearTimeout(senderPotionTimeout);
+      senderPotionTimeout = null;
+      clearTimeout(receiverContinueTimeout);
+      receiverContinueTimeout = null;
+    }
+
+    function hidePotionOverlay() {
+      clearPotionTimers();
+      potionTargetsEl.innerHTML = "";
+      potionContinueBtn.classList.remove("visible");
+      potionContinueBtn.onclick = null;
+      animateOverlayOut(potionOverlay, () => {
+        flushPostOverlayNotifications();
+      });
+    }
+
+    function showSentPotionConfirmation(targetName) {
+      populatePotionBubbles();
+      potionTitleEl.textContent = "Pocion Magica Enviada";
+      potionMessageEl.textContent = `Has mandado una pocion magica a ${targetName}`;
+      potionTargetsEl.innerHTML = "";
+      potionContinueBtn.classList.remove("visible");
+      cancelOverlayExit(potionOverlay);
+      potionOverlay.classList.remove("overlay-exiting");
+      potionOverlay.classList.add("active");
+
+      clearPotionTimers();
+      senderPotionTimeout = setTimeout(() => {
+        hidePotionOverlay();
+      }, 2200);
+    }
+
+    async function dispatchPotionToTarget(targetId, targetName, matchData = latestMatchData) {
+      if (!currentMatchId || !currentPlayerId) return;
+      const requestId = `potion_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      handledPotionRequestId = requestId;
+
+      const fromId = currentPlayerId;
+      const fromName = matchData?.players?.[currentPlayerId]?.name || "Un mago";
+      const resolvedTargetName = targetName || matchData?.players?.[targetId]?.name || "Rival";
+
+      const potionEvent = {
+        requestId,
+        fromId,
+        fromName,
+        targetId,
+        targetName: resolvedTargetName,
+        createdAt: Date.now()
+      };
+
+      try {
+        await updateDoc(doc(db, "duelos", currentMatchId), {
+          potionEvent,
+          [`pendingPotionByPlayer.${targetId}`]: potionEvent,
+          updatedAt: serverTimestamp()
+        });
+        showSentPotionConfirmation(resolvedTargetName);
+      } catch (err) {
+        console.error("Error enviando potionEvent a Firestore:", err);
+      }
+    }
+
+    async function executeArcaneSpell(idx) {
+      if (!currentMatchId || !currentPlayerId || !latestMatchData) return;
+
+      const rivalIds = getRivalIds(latestMatchData);
+      if (rivalIds.length === 0) return;
+
+      const rivals = rivalIds.map((rid) => ({
+        id: rid,
+        name: latestMatchData?.players?.[rid]?.name || "Rival"
+      }));
+
+      if (rivals.length === 1) {
+        await dispatchPotionToTarget(rivals[0].id, rivals[0].name, latestMatchData);
+        return;
+      }
+
+      populatePotionBubbles();
+      potionTitleEl.textContent = "Elige a Quien Mandar Beber";
+      potionMessageEl.textContent = "Has conquistado una casilla con Magia Arcana. Elige a que rival mandar beber:";
+      potionTargetsEl.innerHTML = "";
+      potionContinueBtn.classList.remove("visible");
+
+      rivals.forEach((rival) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "potion-target-btn";
+        btn.textContent = `Mandar beber a ${rival.name}`;
+        btn.addEventListener("click", async () => {
+          potionTargetsEl.innerHTML = "";
+          await dispatchPotionToTarget(rival.id, rival.name, latestMatchData);
+        });
+        potionTargetsEl.appendChild(btn);
+      });
+
+      cancelOverlayExit(potionOverlay);
+      potionOverlay.classList.remove("overlay-exiting");
+      potionOverlay.classList.add("active");
+    }
+
+    function syncIncomingPotionOverlay(matchData) {
+      const pendingPotion = getPendingPotionInfo(matchData, currentPlayerId);
+      if (!pendingPotion || !pendingPotion.requestId) {
+        if (potionOverlay.classList.contains("active") && potionContinueBtn.onclick === acknowledgePendingPotionForCurrentPlayer) {
+          hidePotionOverlay();
+        }
+        return;
+      }
+
+      const myPlayer = matchData?.players?.[currentPlayerId];
+      if (isPlayerFrozenNow(myPlayer)) return;
+
+      if (
+        potionOverlay.classList.contains("active") &&
+        handledPotionRequestId === pendingPotion.requestId &&
+        potionContinueBtn.onclick === acknowledgePendingPotionForCurrentPlayer
+      ) {
+        return;
+      }
+
+      handledPotionRequestId = pendingPotion.requestId;
+      clearPotionTimers();
+      populatePotionBubbles();
+
+      const senderLabel = pendingPotion.fromName || "Un mago rival";
+      potionTitleEl.textContent = "Pocion Arcana Recibida";
+      potionMessageEl.textContent = `${senderLabel} te ha mandado una pocion magica, bebe y pulsa el boton para continuar.`;
+      potionTargetsEl.innerHTML = "";
+      potionContinueBtn.classList.remove("visible");
+      potionContinueBtn.onclick = () => acknowledgePendingPotionForCurrentPlayer();
+
+      cancelOverlayExit(potionOverlay);
+      potionOverlay.classList.remove("overlay-exiting");
+      potionOverlay.classList.add("active");
+
+      receiverContinueTimeout = setTimeout(() => {
+        potionContinueBtn.classList.add("visible");
+      }, 10000);
+    }
+
+    function syncFreezeOverlay(myPlayer) {
+      clearInterval(freezeTimerInterval);
+      const frozenUntil = typeof myPlayer?.frozenUntil === "number" ? myPlayer.frozenUntil : 0;
+      const remainingMs = frozenUntil - Date.now();
+
+      if (remainingMs > 0) {
+        closeSpellModal();
+        closeFusionTableModal();
+        hidePotionOverlay();
+        hideShakeOverlay(false);
+        animateOverlayOut(waterTargetOverlay);
+        populateFreezeIceLayer();
+        cancelOverlayExit(freezeOverlay);
+        freezeOverlay.classList.remove("overlay-exiting");
+        freezeOverlay.classList.add("active");
+        freezeCountdownEl.textContent = formatRemainingMs(remainingMs);
+
+        freezeTimerInterval = setInterval(() => {
+          const left = frozenUntil - Date.now();
+          if (left <= 0) {
+            clearInterval(freezeTimerInterval);
+            freezeCountdownEl.textContent = "00:00";
+            animateOverlayOut(freezeOverlay, () => {
+              flushPostOverlayNotifications();
+            });
+            if (currentMatchId && currentPlayerId) {
+              updateDoc(doc(db, "duelos", currentMatchId), {
+                [`players.${currentPlayerId}.frozenUntil`]: 0,
+                updatedAt: serverTimestamp()
+              }).catch(() => {});
+            }
+          } else {
+            freezeCountdownEl.textContent = formatRemainingMs(left);
+          }
+        }, 250);
+      } else {
+        animateOverlayOut(freezeOverlay, () => {
+          flushPostOverlayNotifications();
+        });
+      }
+    }
+
+    startBtn.addEventListener("click", () => registerAndMatchmake());
+    nameInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") registerAndMatchmake();
+    });
+
+    seedTestUsersIfNeeded();
+  </script>
+</body>
+</html>
