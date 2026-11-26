@@ -4299,9 +4299,9 @@
     }
 
     async function dispatchPotionToTarget(targetId, targetName, matchData = latestMatchData) {
-      if (!currentMatchId || !currentPlayerId) return;
+      if (!currentMatchId || !currentPlayerId || !targetId) return;
       const freshMatch = (await getFreshMatchSnapshotData()) || matchData;
-      if (hasAnyActivePotionInMatch(freshMatch)) {
+      if (hasAnyActivePotionInMatch(freshMatch) || getPendingPotionInfo(freshMatch, targetId)) {
         return;
       }
 
@@ -4333,6 +4333,15 @@
       }
     }
 
+    function getEligiblePotionRivals(matchData) {
+      return getRivalIds(matchData)
+        .filter((rid) => !getPendingPotionInfo(matchData, rid))
+        .map((rid) => ({
+          id: rid,
+          name: limitWizardName(matchData?.players?.[rid]?.name) || "Rival"
+        }));
+    }
+
     async function executeArcaneSpell(idx) {
       if (!currentMatchId || !currentPlayerId || !latestMatchData) return;
 
@@ -4341,16 +4350,11 @@
         return;
       }
 
-      const rivalIds = getRivalIds(freshMatch);
-      if (rivalIds.length === 0) return;
+      const eligibleRivals = getEligiblePotionRivals(freshMatch);
+      if (eligibleRivals.length === 0) return;
 
-      const rivals = rivalIds.map((rid) => ({
-        id: rid,
-        name: limitWizardName(freshMatch?.players?.[rid]?.name) || "Rival"
-      }));
-
-      if (rivals.length === 1) {
-        await dispatchPotionToTarget(rivals[0].id, rivals[0].name, freshMatch);
+      if (eligibleRivals.length === 1) {
+        await dispatchPotionToTarget(eligibleRivals[0].id, eligibleRivals[0].name, freshMatch);
         return;
       }
 
@@ -4360,7 +4364,7 @@
       potionTargetsEl.innerHTML = "";
       potionContinueBtn.classList.remove("visible");
 
-      rivals.forEach((rival) => {
+      eligibleRivals.forEach((rival) => {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "potion-target-btn";
