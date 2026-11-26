@@ -3372,7 +3372,7 @@
       .bingo-cell {
         font-size: clamp(0.6rem, 2.2vh, 0.78rem);
         padding: 0.25rem;
-		min-width: 15vw;
+		min-width: 12.5vw;
       }
     }
 
