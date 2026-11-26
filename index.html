@@ -250,6 +250,141 @@
       color: #e0f2fe;
       vertical-align: middle;
     }
+
+    /* Celda quemada / estilo carbón tras usar fuego en planta */
+    .bingo-cell.plant-charred {
+      background:
+        radial-gradient(circle at 24% 28%, rgba(251, 146, 60, 0.24) 0%, transparent 32%),
+        radial-gradient(circle at 76% 72%, rgba(239, 68, 68, 0.2) 0%, transparent 36%),
+        repeating-linear-gradient(
+          -34deg,
+          rgba(255, 255, 255, 0.04) 0px,
+          rgba(255, 255, 255, 0.04) 2px,
+          transparent 2px,
+          transparent 9px
+        ),
+        linear-gradient(155deg, #27272a 0%, #18181b 52%, #09090b 100%) !important;
+      border-color: #78350f !important;
+      color: #e7e5e4 !important;
+      box-shadow:
+        inset 0 0 18px rgba(0, 0, 0, 0.92),
+        inset 0 0 10px rgba(234, 88, 12, 0.32),
+        0 0 10px rgba(120, 53, 15, 0.55) !important;
+      cursor: not-allowed;
+    }
+
+    .bingo-cell.plant-charred::after {
+      content: "";
+      position: absolute;
+      inset: 3px;
+      border-radius: inherit;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 30% 78%, rgba(249, 115, 22, 0.42) 0%, transparent 26%),
+        radial-gradient(circle at 72% 24%, rgba(239, 68, 68, 0.36) 0%, transparent 24%);
+      animation: charcoalEmberGlow 2.4s ease-in-out infinite;
+    }
+
+    @keyframes charcoalEmberGlow {
+      0%, 100% {
+        opacity: 0.45;
+      }
+      50% {
+        opacity: 0.95;
+      }
+    }
+
+    .charred-timer-badge {
+      position: absolute;
+      bottom: 4px;
+      right: 5px;
+      z-index: 4;
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-size: 0.66rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.03em;
+      color: #fed7aa;
+      background: rgba(24, 24, 27, 0.9);
+      border: 1px solid rgba(249, 115, 22, 0.68);
+      box-shadow: 0 0 8px rgba(234, 88, 12, 0.5);
+      pointer-events: none;
+    }
+
+    /* Animación de fuego / quemarse en una celda después de cerrar el overlay de fuego */
+    .bingo-cell.fire-burn-effect {
+      position: relative;
+      overflow: hidden;
+      animation: cellFireBurnShake 1.35s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+      z-index: 6;
+    }
+
+    .bingo-cell.fire-burn-effect::before {
+      content: "";
+      position: absolute;
+      inset: -12%;
+      z-index: 5;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 88%, rgba(254, 240, 138, 0.96) 0%, rgba(249, 115, 22, 0.88) 38%, rgba(220, 38, 38, 0.72) 68%, transparent 92%),
+        linear-gradient(0deg, rgba(234, 88, 12, 0.85) 0%, rgba(185, 28, 28, 0.45) 55%, transparent 100%);
+      mix-blend-mode: screen;
+      animation: cellFireFlameSurge 1.35s ease-out forwards;
+    }
+
+    @keyframes cellFireBurnShake {
+      0% {
+        transform: scale(1);
+        filter: brightness(1);
+        box-shadow: 0 0 0 rgba(249, 115, 22, 0);
+      }
+      14% {
+        transform: scale(1.07) rotate(-1.5deg);
+        filter: brightness(1.55) saturate(1.5);
+        box-shadow: 0 0 26px rgba(251, 146, 60, 0.95), inset 0 0 18px rgba(254, 215, 170, 0.85);
+      }
+      32% {
+        transform: scale(1.05) rotate(1.6deg);
+        filter: brightness(1.4) contrast(1.2);
+        box-shadow: 0 0 32px rgba(239, 68, 68, 0.95), inset 0 0 22px rgba(249, 115, 22, 0.9);
+      }
+      55% {
+        transform: scale(1.02) rotate(-0.8deg);
+        filter: brightness(1.15) sepia(0.35);
+        box-shadow: 0 0 20px rgba(234, 88, 12, 0.75);
+      }
+      100% {
+        transform: scale(1) rotate(0deg);
+        filter: brightness(1);
+        box-shadow: 0 0 0 rgba(249, 115, 22, 0);
+      }
+    }
+
+    @keyframes cellFireFlameSurge {
+      0% {
+        opacity: 0;
+        transform: translateY(38%) scale(0.75);
+      }
+      22% {
+        opacity: 1;
+        transform: translateY(0%) scale(1.08);
+      }
+      65% {
+        opacity: 0.85;
+        transform: translateY(-12%) scale(1.02);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-34%) scale(0.92);
+      }
+    }
+
+    .bingo-cell.earth-locked-mine {
+      box-shadow:
+        inset 0 0 0 2px rgba(250, 204, 21, 0.85),
+        0 0 12px rgba(250, 204, 21, 0.45);
+    }
   </style>
 </head>
 <body>
@@ -345,12 +480,12 @@
 
         <div class="spell-item" id="earth-spell-item">
           <button type="button" class="spell-btn" id="btn-earth-spell">Tierra - Bloquear Casilla</button>
-          <div class="spell-desc">Bloquea esta casilla durante 3 minutos para que nadie pueda cambiarla ni moverla.</div>
+          <div class="spell-desc">Bloquea esta casilla durante 3 minutos (max. 2 por mago; 1 en truelo). Solo su creador puede conquistarla.</div>
         </div>
 
         <div class="spell-item" id="fire-spell-item">
           <button type="button" class="spell-btn" id="btn-fire-spell">Fuego - Disipar Conquista</button>
-          <div class="spell-desc">Solo disponible en casillas conquistadas por otro jugador; elimina su conquista y la deja libre.</div>
+          <div class="spell-desc">Disipa conquistas rivales (o quita el blindaje metalico manteniendo su color) y quema celdas germinadas convirtiendolas en carbon durante 1:00.</div>
         </div>
       </div>
 
@@ -595,7 +730,7 @@
         spellName: "Germinar",
         themeClass: "theme-fusion-plant",
         glyphs: "🌿 🌱 🌿",
-        description: "Germina esta casilla vacia (+25% velocidad de recarga arcana mientras tengas al menos una celda germinada)."
+        description: "Germina esta casilla vacia (maximo 1 por mago; +33% velocidad de recarga arcana mientras este activa)."
       },
       {
         id: "metal",
@@ -622,7 +757,7 @@
         spellName: "Velo de las Sombras",
         themeClass: "theme-fusion-mist",
         glyphs: "✦ ✧ ✦",
-        description: "Envuelve en sombras a todos los rivales aumentando un 30% el tiempo de recarga de su barra arcana."
+        description: "Envuelve en sombras a todos los rivales aumentando un 25% el tiempo de recarga de su barra arcana (acumulable hasta 75% sin extender tiempo)."
       }
     ];
 
@@ -632,9 +767,16 @@
       return ELEMENT_COMBINATIONS.filter((combo) => fullElements.has(combo.pair[0]) && fullElements.has(combo.pair[1]));
     }
 
+    const expiredCharredKeys = new Set();
+
     function getActivePlantCell(matchData, cellIndex) {
       const plant = matchData?.plantCells?.[String(cellIndex)];
       return plant?.playerId ? plant : null;
+    }
+
+    function getActiveCharredCell(matchData, cellIndex) {
+      const charred = matchData?.charredCells?.[String(cellIndex)];
+      return charred?.expiresAt && Date.now() < charred.expiresAt ? charred : null;
     }
 
     function getActiveMetalArmor(matchData, cellIndex) {
@@ -647,8 +789,50 @@
       return Object.values(plants).some((p) => p && p.playerId === playerId);
     }
 
+    function isMatchTruelo(matchData) {
+      const activeMatch = matchData || latestMatchData;
+      return Boolean(
+        activeMatch &&
+        (activeMatch.mode === "truelo" ||
+          activeMatch.gridSize === 20 ||
+          (Array.isArray(activeMatch.participantIds) && activeMatch.participantIds.length === 3))
+      );
+    }
+
+    function getMaxEarthLocksForMatch(matchData) {
+      return isMatchTruelo(matchData) ? 1 : 2;
+    }
+
+    function countActiveEarthLocksForPlayer(matchData, playerId) {
+      if (!matchData?.earthLocks || !playerId) return 0;
+      const now = Date.now();
+      return Object.values(matchData.earthLocks).filter(
+        (lock) => lock && lock.playerId === playerId && typeof lock.expiresAt === "number" && now < lock.expiresAt
+      ).length;
+    }
+
+    function canWizardConquerCell(matchData, playerId, cellIndex) {
+      if (!playerId) return false;
+      const claim = matchData?.cellClaims?.[String(cellIndex)];
+      if (claim?.playerId) return false;
+      if (getActiveCharredCell(matchData, cellIndex)) return false;
+      const earthLock = getActiveEarthLock(matchData, cellIndex);
+      if (earthLock?.playerId) {
+        return earthLock.playerId === playerId;
+      }
+      return true;
+    }
+
+    function getShadowVeilPenaltyPercent(playerData) {
+      if (!playerData || typeof playerData.shadowVeilUntil !== "number" || playerData.shadowVeilUntil <= Date.now()) {
+        return 0;
+      }
+      const rawBoost = typeof playerData.shadowVeilBoost === "number" ? playerData.shadowVeilBoost : 25;
+      return Math.max(0, Math.min(75, rawBoost));
+    }
+
     function isShadowVeilActiveForPlayer(playerData) {
-      return typeof playerData?.shadowVeilUntil === "number" && playerData.shadowVeilUntil > Date.now();
+      return getShadowVeilPenaltyPercent(playerData) > 0;
     }
 
     function isElementShortCircuited(playerData, elementKey) {
@@ -760,10 +944,11 @@
       const playerData = activeMatch?.players?.[playerId];
       let duration = ARCANE_COOLDOWN_MS;
       if (playerHasActivePlantCell(activeMatch, playerId)) {
-        duration = duration / 1.25;
+        duration = duration / 1.33;
       }
-      if (isShadowVeilActiveForPlayer(playerData)) {
-        duration = duration * 1.3;
+      const shadowPenaltyPct = getShadowVeilPenaltyPercent(playerData);
+      if (shadowPenaltyPct > 0) {
+        duration = duration * (1 + shadowPenaltyPct / 100);
       }
       return Math.round(duration);
     }
@@ -927,14 +1112,19 @@
         const isClaimed = Boolean(claim?.playerId);
         const claimedByMe = claim?.playerId === currentPlayerId;
         const lockedByAny = Boolean(earthLock?.playerId);
+        const lockedByMe = Boolean(earthLock?.playerId && earthLock.playerId === currentPlayerId);
         const currentlyDisabled = btnArcaneSpell.disabled;
-        const shouldBeAvailable = myWasReady && !isClaimed && !lockedByAny;
+        const shouldBeAvailable = myWasReady && !isClaimed && (!lockedByAny || lockedByMe);
         if (currentlyDisabled === shouldBeAvailable) {
           setSpellButtonState(btnArcaneSpell, arcaneSpellItem, {
             used: false,
             available: shouldBeAvailable
           });
-          if (!lockedByAny && !claimedByMe) {
+          if (lockedByMe && !isClaimed) {
+            arcaneSpellDesc.textContent = !myWasReady
+              ? "Esta casilla de Tierra es tuya; espera a que cargue tu magia arcana para conquistarla."
+              : "Esta casilla de Tierra es tuya. Puedes conquistarla con tu color arcano.";
+          } else if (!lockedByAny && !claimedByMe) {
             arcaneSpellDesc.textContent = !myWasReady
               ? "La magia arcana se esta recargando (15 segundos)..."
               : claim?.playerId
@@ -1456,6 +1646,7 @@
           cellClaims: {},
           earthLocks: {},
           plantCells: {},
+          charredCells: {},
           metalArmors: {},
           potionEvent: null,
           spellCastEvent: null,
@@ -1538,18 +1729,28 @@
     }
 
     async function clearExpiredEarthLocksIfNeeded(matchData) {
-      if (!currentMatchId || !matchData?.earthLocks) return;
-      const locks = matchData.earthLocks;
+      if (!currentMatchId || !matchData) return;
+      const locks = matchData.earthLocks || {};
+      const charred = matchData.charredCells || {};
       const claims = matchData.cellClaims || {};
       const now = Date.now();
       const updates = {};
 
       Object.keys(locks).forEach((key) => {
         const lock = locks[key];
-        const runKey = `${currentMatchId}_${key}_${lock?.expiresAt || "0"}`;
+        const runKey = `${currentMatchId}_earth_${key}_${lock?.expiresAt || "0"}`;
         if (lock?.expiresAt && now >= lock.expiresAt && !expiredEarthKeys.has(runKey)) {
           expiredEarthKeys.add(runKey);
           if (!claims[key]?.playerId) updates[`earthLocks.${key}`] = null;
+        }
+      });
+
+      Object.keys(charred).forEach((key) => {
+        const item = charred[key];
+        const runKey = `${currentMatchId}_charred_${key}_${item?.expiresAt || "0"}`;
+        if (item?.expiresAt && now >= item.expiresAt && !expiredCharredKeys.has(runKey)) {
+          expiredCharredKeys.add(runKey);
+          updates[`charredCells.${key}`] = null;
         }
       });
 
@@ -1557,7 +1758,7 @@
         try {
           await updateDoc(doc(db, "duelos", currentMatchId), updates);
         } catch (err) {
-          console.error("Error limpiando bloqueo de Tierra expirado:", err);
+          console.error("Error limpiando estados temporales expirados:", err);
         }
       }
     }
@@ -1567,7 +1768,7 @@
       clearExpiredEarthLocksIfNeeded(matchData);
 
       const updateBadges = () => {
-        const badges = bingoGridEl.querySelectorAll(".earth-timer-badge[data-expires]");
+        const badges = bingoGridEl.querySelectorAll(".earth-timer-badge[data-expires], .charred-timer-badge[data-expires]");
         let anyExpiredNow = false;
         badges.forEach((badge) => {
           const left = Number(badge.getAttribute("data-expires") || 0) - Date.now();
@@ -1600,6 +1801,11 @@
       if (matchData.plantCells && typeof matchData.plantCells === "object") {
         Object.entries(matchData.plantCells).forEach(([idxKey, val]) => {
           if (val && val.playerId) neutralSet.add(Number(idxKey));
+        });
+      }
+      if (matchData.charredCells && typeof matchData.charredCells === "object") {
+        Object.entries(matchData.charredCells).forEach(([idxKey, val]) => {
+          if (val && val.expiresAt && Date.now() < val.expiresAt) neutralSet.add(Number(idxKey));
         });
       }
       if (matchData.earthLocks && typeof matchData.earthLocks === "object") {
@@ -1669,21 +1875,23 @@
       if (!playerData) return 0;
       const activeMatch = matchData || latestMatchData;
       const neutralSet = getNeutralCellIndicesSet(activeMatch);
-      const conqueredEver = typeof playerData.conqueredEverCount === "number" ? playerData.conqueredEverCount : 0;
       const pid = playerId || playerData.id;
       const currentClaimedCount = pid && activeMatch?.cellClaims
         ? Object.entries(activeMatch.cellClaims)
             .filter(([idxKey, c]) => c && c.playerId === pid && !neutralSet.has(Number(idxKey)))
             .length
         : 0;
-      const conqueredTotal = Math.max(conqueredEver, currentClaimedCount);
+      const conqueredEver = Math.max(
+        typeof playerData.conqueredEverCount === "number" ? playerData.conqueredEverCount : 0,
+        currentClaimedCount
+      );
       const { cols, rows } = getGridDimensions(activeMatch);
-      const completedLines = pid ? countCompletedLinesForPlayer(pid, cols, rows, activeMatch) : 0;
+      const currentLines = pid ? countCompletedLinesForPlayer(pid, cols, rows, activeMatch) : 0;
       const linesEver = Math.max(
         typeof playerData.linesEverCount === "number" ? playerData.linesEverCount : 0,
-        completedLines
+        currentLines
       );
-      return conqueredTotal + linesEver * 2;
+      return conqueredEver * 1 + currentClaimedCount * 2 + linesEver * 3 + currentLines * 4;
     }
 
     function showArcaneLineBanner(playerName, color) {
@@ -1743,20 +1951,6 @@
         const scoreSpan = document.createElement("span");
         scoreSpan.className = "player-score";
         scoreSpan.textContent = String(computePlayerScore(p, latestMatchData, pid));
-        if (isFrozenNow) {
-          const freezeBadge = document.createElement("span");
-          freezeBadge.className = "frozen-score-badge";
-          freezeBadge.textContent = "❄️";
-          freezeBadge.title = "Mago congelado por Agua";
-          scoreSpan.appendChild(freezeBadge);
-        }
-
-        if (getPendingPotionInfo(latestMatchData, pid)) {
-          const alembicSpan = document.createElement("span");
-          alembicSpan.className = "potion-pending-alembic";
-          alembicSpan.textContent = "⚗️";
-          nameSpan.appendChild(alembicSpan);
-        }
 
         mainRow.appendChild(nameSpan);
         mainRow.appendChild(scoreSpan);
@@ -1815,13 +2009,20 @@
         const claim = claims[String(i)];
         const earthLock = getActiveEarthLock(matchData, i);
         const plantCell = getActivePlantCell(matchData, i);
+        const charredCell = getActiveCharredCell(matchData, i);
         const metalArmor = claim?.playerId ? getActiveMetalArmor(matchData, i) : null;
         const claimedColor = claim?.color;
 
-        cell.classList.remove("plant-germinated");
-        cell.querySelectorAll(".plant-owner-dot").forEach((dot) => dot.remove());
-        if (plantCell) cell.classList.add("plant-germinated");
-        if (earthLock && !claim?.playerId) cell.classList.add("earth-locked");
+        cell.classList.remove("plant-germinated", "plant-charred");
+        cell.querySelectorAll(".plant-owner-dot, .charred-timer-badge").forEach((el) => el.remove());
+        if (charredCell) cell.classList.add("plant-charred");
+        else if (plantCell) cell.classList.add("plant-germinated");
+        if (earthLock && !claim?.playerId) {
+          cell.classList.add("earth-locked");
+          if (earthLock.playerId === currentPlayerId) {
+            cell.classList.add("earth-locked-mine");
+          }
+        }
         if (claimedColor && ARCANE_COLORS.includes(claimedColor)) cell.classList.add(`claimed-${claimedColor}`);
         if (metalArmor) cell.classList.add("metal-armored");
         if (airSourceCellIndex === i) cell.classList.add("air-selected");
@@ -1898,7 +2099,13 @@
         labelSpan.textContent = board[i] || `Evento ${i + 1}`;
         cell.appendChild(labelSpan);
 
-        if (plantCell && plantCell.playerId) {
+        if (charredCell) {
+          const charredBadge = document.createElement("span");
+          charredBadge.className = "charred-timer-badge";
+          charredBadge.setAttribute("data-expires", String(charredCell.expiresAt));
+          charredBadge.textContent = formatRemainingMs(charredCell.expiresAt - Date.now());
+          cell.appendChild(charredBadge);
+        } else if (plantCell && plantCell.playerId) {
           const plantOwnerColor = matchData.players?.[plantCell.playerId]?.color;
           if (plantOwnerColor && ARCANE_COLORS.includes(plantOwnerColor)) {
             const plantDot = document.createElement("span");
@@ -1931,7 +2138,7 @@
                 e.dataTransfer.setData("text/plain", String(i));
               }
             });
-          } else if (!earthLock && !metalArmor) {
+          } else if (!earthLock && !metalArmor && !charredCell) {
             cell.addEventListener("dragover", (e) => {
               e.preventDefault();
               if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
@@ -1962,6 +2169,7 @@
 
       const myPlayer = latestMatchData.players?.[currentPlayerId];
       if (!myPlayer || isPlayerFrozenNow(myPlayer)) return;
+      if (getActiveCharredCell(latestMatchData, index)) return;
 
       if (airSourceCellIndex !== null) {
         if (airSourceCellIndex === index) {
@@ -1995,12 +2203,17 @@
       const claim = latestMatchData.cellClaims?.[String(index)];
       const earthLock = getActiveEarthLock(latestMatchData, index);
       const plantCell = getActivePlantCell(latestMatchData, index);
+      const charredCell = getActiveCharredCell(latestMatchData, index);
+      if (charredCell) return;
       const metalArmor = getActiveMetalArmor(latestMatchData, index);
       const isClaimed = Boolean(claim?.playerId);
       const claimedByMe = claim?.playerId === currentPlayerId;
       const claimedByRival = isClaimed && !claimedByMe;
       const lockedByAny = Boolean(earthLock?.playerId);
-      const canConquer = isArcaneSpellReady(myPlayer) && !isClaimed && !lockedByAny;
+      const lockedByMe = Boolean(earthLock?.playerId && earthLock.playerId === currentPlayerId);
+      const hasPlant = Boolean(plantCell?.playerId);
+      const isMyPlant = Boolean(plantCell?.playerId && plantCell.playerId === currentPlayerId);
+      const canConquer = isArcaneSpellReady(myPlayer) && canWizardConquerCell(latestMatchData, currentPlayerId, index);
 
       selectedSpellCellIndex = index;
       spellCellPreview.textContent = `Casilla ${index + 1}: "${board[index] || ""}"`;
@@ -2009,8 +2222,12 @@
         used: false,
         available: canConquer
       });
-      if (lockedByAny) {
-        arcaneSpellDesc.textContent = "Esta casilla esta bloqueada por Tierra y no se puede conquistar.";
+      if (lockedByAny && !lockedByMe) {
+        arcaneSpellDesc.textContent = "Esta casilla esta bloqueada por Tierra y solo puede conquistarla el mago que la creo.";
+      } else if (lockedByMe && !isClaimed) {
+        arcaneSpellDesc.textContent = !isArcaneSpellReady(myPlayer)
+          ? "Esta casilla de Tierra es tuya; espera a que cargue tu magia arcana para conquistarla."
+          : "Esta casilla de Tierra es tuya. Puedes conquistarla con tu color arcano.";
       } else if (claimedByMe) {
         arcaneSpellDesc.textContent = "Ya has conquistado esta casilla con tu color arcano.";
       } else if (claimedByRival) {
@@ -2034,13 +2251,17 @@
         available: canMoveCell
       });
 
-      const canLockCell = !lockedByAny && !isClaimed && charges.earth >= 3 && !isElementShortCircuited(myPlayer, "earth");
+      const activeEarthLocksCount = countActiveEarthLocksForPlayer(latestMatchData, currentPlayerId);
+      const maxEarthLocks = getMaxEarthLocksForMatch(latestMatchData);
+      const underEarthLimit = activeEarthLocksCount < maxEarthLocks;
+      const canLockCell = !lockedByAny && !isClaimed && !hasPlant && underEarthLimit && charges.earth >= 3 && !isElementShortCircuited(myPlayer, "earth");
       setSpellButtonState(btnEarthSpell, earthSpellItem, {
         used: charges.earth < 3,
         available: canLockCell
       });
 
-      const canDispelCell = claimedByRival && !lockedByAny && charges.fire >= 3 && !isElementShortCircuited(myPlayer, "fire");
+      const canFireTarget = (claimedByRival || (hasPlant && !isMyPlant)) && !lockedByAny;
+      const canDispelCell = canFireTarget && charges.fire >= 3 && !isElementShortCircuited(myPlayer, "fire");
       setSpellButtonState(btnFireSpell, fireSpellItem, {
         used: charges.fire < 3,
         available: canDispelCell
@@ -2063,20 +2284,22 @@
       const claim = latestMatchData.cellClaims?.[String(cellIndex)];
       const earthLock = getActiveEarthLock(latestMatchData, cellIndex);
       const plantCell = getActivePlantCell(latestMatchData, cellIndex);
+      const charredCell = getActiveCharredCell(latestMatchData, cellIndex);
       const metalArmor = getActiveMetalArmor(latestMatchData, cellIndex);
       const isClaimed = Boolean(claim?.playerId);
       const claimedByMe = claim?.playerId === currentPlayerId;
+      const alreadyHasPlant = playerHasActivePlantCell(latestMatchData, currentPlayerId);
       const rivalIds = getRivalIds(latestMatchData);
 
       fusionSpellsList.innerHTML = "";
       ELEMENT_COMBINATIONS.forEach((combo) => {
         const isUnlocked = unlocked.some((u) => u.id === combo.id);
-        let canCastNow = isUnlocked;
+        let canCastNow = isUnlocked && !charredCell;
 
         if (combo.id === "plant") {
-          canCastNow = isUnlocked && !isClaimed && !earthLock && !plantCell;
+          canCastNow = isUnlocked && !charredCell && !isClaimed && !earthLock && !plantCell && !alreadyHasPlant;
         } else if (combo.id === "metal") {
-          canCastNow = isUnlocked && claimedByMe && !metalArmor;
+          canCastNow = isUnlocked && !charredCell && claimedByMe && !metalArmor;
         } else if (combo.id === "lightning") {
           canCastNow = isUnlocked && rivalIds.length > 0;
         } else if (combo.id === "mist") {
@@ -2503,6 +2726,20 @@
       castFallbackBtn.classList.remove("visible");
       castShakePromptEl.textContent = "¡Hechizo desatado!";
 
+      if (actionToRun.spellKey === "fire") {
+        animateOverlayOut(castShakeOverlay, async () => {
+          clearThemeEffects();
+          isCastingTriggered = false;
+          try {
+            await actionToRun.onConfirmed();
+          } catch (err) {
+            console.error("Error ejecutando hechizo confirmado:", err);
+          }
+          flushPostOverlayNotifications();
+        });
+        return;
+      }
+
       animateOverlayOut(castShakeOverlay, () => {
         clearThemeEffects();
       });
@@ -2649,26 +2886,35 @@
       if (ev.spellTheme === "air" && Array.isArray(ev.swappedIndices) && ev.swappedIndices.length === 2) {
         pendingAirSwapIndices = ev.swappedIndices;
       }
+      const isFireCast = ev.spellKey === "fire" || ev.themeClass === "theme-fire";
+      const fireTargetCellIndex = isFireCast && typeof ev.cellIndex === "number" ? ev.cellIndex : null;
 
-      const applyAirSwapBlinkNow = () => {
+      const applyPostCastCellEffectsNow = () => {
+        let needsRender = false;
         if (pendingAirSwapIndices && pendingAirSwapIndices.length === 2) {
           const [aIdx, bIdx] = pendingAirSwapIndices;
           airBlinkCellIndices.set(aIdx, bIdx);
           airBlinkCellIndices.set(bIdx, aIdx);
-          if (!deferEffects && latestMatchData) {
-            renderBingoGrid(latestMatchData);
-          }
+          needsRender = true;
+        }
+        if (typeof fireTargetCellIndex === "number" && fireTargetCellIndex >= 0) {
+          fireBurnCellIndices.add(fireTargetCellIndex);
+          pendingPostOverlaySpellCells.add(fireTargetCellIndex);
+          needsRender = true;
+        }
+        if (needsRender && !deferEffects && latestMatchData) {
+          renderBingoGrid(latestMatchData);
         }
       };
 
       if (isPlayerFrozenNow(myPlayer)) {
-        applyAirSwapBlinkNow();
+        applyPostCastCellEffectsNow();
         return;
       }
 
       const isTargetedAtMe = !Array.isArray(ev.targetIds) || ev.targetIds.includes(currentPlayerId);
       if (!isTargetedAtMe) {
-        applyAirSwapBlinkNow();
+        applyPostCastCellEffectsNow();
         return;
       }
 
@@ -2690,9 +2936,7 @@
         if (!pendingSpellAction && castShakeOverlay.classList.contains("active")) {
           animateOverlayOut(castShakeOverlay, () => {
             clearThemeEffects();
-            if (ev.spellTheme === "air") {
-              applyAirSwapBlinkNow();
-            }
+            applyPostCastCellEffectsNow();
             flushPostOverlayNotifications();
           });
         }
@@ -2706,14 +2950,17 @@
       if (!myPlayer) return;
 
       const existingClaim = latestMatchData.cellClaims?.[String(cellIndex)];
-      if (conquer && existingClaim?.playerId) return;
+      const activeLock = getActiveEarthLock(latestMatchData, cellIndex);
+      if (conquer && activeLock?.playerId && activeLock.playerId !== currentPlayerId) return;
+      if (conquer && (existingClaim?.playerId || !canWizardConquerCell(latestMatchData, currentPlayerId, cellIndex))) return;
 
       const updates = { updatedAt: serverTimestamp() };
-      const neutralSet = getNeutralCellIndicesSet(latestMatchData);
       const { cols, rows } = getGridDimensions(latestMatchData);
       const prevLines = countCompletedLinesForPlayer(currentPlayerId, cols, rows, latestMatchData);
 
       const projectedClaims = { ...(latestMatchData.cellClaims || {}) };
+      const projectedPlants = { ...(latestMatchData.plantCells || {}) };
+      const projectedEarthLocks = { ...(latestMatchData.earthLocks || {}) };
       const playerColor = myPlayer.color || ARCANE_COLORS[0];
       if (conquer) {
         projectedClaims[String(cellIndex)] = {
@@ -2721,8 +2968,15 @@
           playerName: myPlayer.name,
           color: playerColor
         };
+        delete projectedPlants[String(cellIndex)];
+        delete projectedEarthLocks[String(cellIndex)];
       }
-      const projectedMatch = { ...latestMatchData, cellClaims: projectedClaims };
+      const projectedMatch = {
+        ...latestMatchData,
+        cellClaims: projectedClaims,
+        plantCells: projectedPlants,
+        earthLocks: projectedEarthLocks
+      };
 
       const nextLines = countCompletedLinesForPlayer(currentPlayerId, cols, rows, projectedMatch);
       const prevLinesEver = typeof myPlayer.linesEverCount === "number" ? myPlayer.linesEverCount : prevLines;
@@ -2730,12 +2984,17 @@
       const completedNewLine = nextLines > prevLines;
 
       const prevConqueredEver = typeof myPlayer.conqueredEverCount === "number" ? myPlayer.conqueredEverCount : 0;
-      const nextConqueredEver = (conquer && !neutralSet.has(cellIndex)) ? prevConqueredEver + 1 : prevConqueredEver;
+      const nextConqueredEver = conquer ? prevConqueredEver + 1 : prevConqueredEver;
 
       const nextCooldownDuration = getArcaneCooldownDurationForPlayer(latestMatchData, currentPlayerId);
       const nextArcaneReadyAt = conquer ? Date.now() + nextCooldownDuration : (myPlayer.arcaneReadyAt || 0);
 
-      const nextScore = nextConqueredEver + nextLinesEver * 2;
+      const projectedPlayer = {
+        ...myPlayer,
+        conqueredEverCount: nextConqueredEver,
+        linesEverCount: nextLinesEver
+      };
+      const nextScore = computePlayerScore(projectedPlayer, projectedMatch, currentPlayerId);
 
       updates[`players.${currentPlayerId}.linesEverCount`] = nextLinesEver;
       updates[`players.${currentPlayerId}.score`] = nextScore;
@@ -2748,6 +3007,9 @@
         };
         if (latestMatchData?.plantCells?.[String(cellIndex)]) {
           updates[`plantCells.${cellIndex}`] = null;
+        }
+        if (latestMatchData?.earthLocks?.[String(cellIndex)]) {
+          updates[`earthLocks.${cellIndex}`] = null;
         }
         updates[`players.${currentPlayerId}.conqueredEverCount`] = nextConqueredEver;
         updates[`players.${currentPlayerId}.usedSpells.arcane`] = true;
@@ -2786,8 +3048,7 @@
       const myPlayer = latestMatchData.players?.[currentPlayerId];
       if (!isArcaneSpellReady(myPlayer)) return;
       const cellIndex = selectedSpellCellIndex;
-      const existingClaim = latestMatchData.cellClaims?.[String(cellIndex)];
-      if (existingClaim?.playerId || getActiveEarthLock(latestMatchData, cellIndex)) return;
+      if (!canWizardConquerCell(latestMatchData, currentPlayerId, cellIndex)) return;
 
       closeSpellModal();
       startShakeInvocation({
@@ -3018,10 +3279,19 @@
       if (sourcePlant) plantCells[String(targetIndex)] = sourcePlant;
       else delete plantCells[String(targetIndex)];
 
+      const charredCells = { ...(latestMatchData.charredCells || {}) };
+      const sourceCharred = charredCells[String(sourceIndex)] || null;
+      const targetCharred = charredCells[String(targetIndex)] || null;
+      if (targetCharred) charredCells[String(sourceIndex)] = targetCharred;
+      else delete charredCells[String(sourceIndex)];
+      if (sourceCharred) charredCells[String(targetIndex)] = sourceCharred;
+      else delete charredCells[String(targetIndex)];
+
       const projectedMatchData = {
         ...latestMatchData,
         cellClaims: claims,
         plantCells,
+        charredCells,
         metalArmors
       };
       const newScore = computeWizardPoints(
@@ -3052,13 +3322,24 @@
         createdAt: Date.now()
       };
 
+      const { cols: airCols, rows: airRows } = getGridDimensions(projectedMatchData);
+      const myNewLines = countCompletedLinesForPlayer(currentPlayerId, airCols, airRows, projectedMatchData);
+      const myNewLinesEver = Math.max(typeof myPlayer.linesEverCount === "number" ? myPlayer.linesEverCount : 0, myNewLines);
+      const myRecomputedScore = computePlayerScore(
+        { ...myPlayer, board: newBoard, linesEverCount: myNewLinesEver },
+        projectedMatchData,
+        currentPlayerId
+      );
+
       const updates = {
         sharedBoard: newBoard,
         cellClaims: claims,
         plantCells,
+        charredCells,
         metalArmors,
         [`players.${currentPlayerId}.board`]: newBoard,
-        [`players.${currentPlayerId}.score`]: newScore,
+        [`players.${currentPlayerId}.linesEverCount`]: myNewLinesEver,
+        [`players.${currentPlayerId}.score`]: myRecomputedScore,
         [`players.${currentPlayerId}.usedSpells.air`]: true,
         [`players.${currentPlayerId}.elementCharges.air`]: 0,
         spellCastEvent,
@@ -3067,13 +3348,23 @@
 
       Object.keys(latestMatchData.players || {}).forEach((pid) => {
         if (pid === currentPlayerId) return;
-        const pBoard = Array.isArray(latestMatchData.players[pid]?.board)
-          ? [...latestMatchData.players[pid].board]
+        const pObj = latestMatchData.players[pid];
+        const pBoard = Array.isArray(pObj?.board)
+          ? [...pObj.board]
           : [...newBoard];
         const tmp = pBoard[sourceIndex];
         pBoard[sourceIndex] = pBoard[targetIndex];
         pBoard[targetIndex] = tmp;
+        const pNewLines = countCompletedLinesForPlayer(pid, airCols, airRows, projectedMatchData);
+        const pNewLinesEver = Math.max(typeof pObj?.linesEverCount === "number" ? pObj.linesEverCount : 0, pNewLines);
+        const pNewScore = computePlayerScore(
+          { ...pObj, board: pBoard, linesEverCount: pNewLinesEver },
+          projectedMatchData,
+          pid
+        );
         updates[`players.${pid}.board`] = pBoard;
+        updates[`players.${pid}.linesEverCount`] = pNewLinesEver;
+        updates[`players.${pid}.score`] = pNewScore;
       });
 
       try {
@@ -3097,6 +3388,8 @@
       const cellIndex = selectedSpellCellIndex;
       if (getActiveEarthLock(latestMatchData, cellIndex)) return;
       if (latestMatchData.cellClaims?.[String(cellIndex)]?.playerId) return;
+      if (getActivePlantCell(latestMatchData, cellIndex)) return;
+      if (countActiveEarthLocksForPlayer(latestMatchData, currentPlayerId) >= getMaxEarthLocksForMatch(latestMatchData)) return;
 
       closeSpellModal();
       startShakeInvocation({
@@ -3133,46 +3426,57 @@
       if (!myPlayer || getPlayerElementCharges(myPlayer).fire < 3 || isElementShortCircuited(myPlayer, "fire")) return;
 
       const cellIndex = selectedSpellCellIndex;
-      const claim = latestMatchData.cellClaims?.[String(cellIndex)];
-      if (!claim?.playerId || claim.playerId === currentPlayerId) return;
-      if (getActiveEarthLock(latestMatchData, cellIndex)) return;
+      if (getActiveEarthLock(latestMatchData, cellIndex) || getActiveCharredCell(latestMatchData, cellIndex)) return;
 
-      const previousOwnerId = claim.playerId;
-      const hadMetalArmor = Boolean(getActiveMetalArmor(latestMatchData, cellIndex));
+      const claim = latestMatchData.cellClaims?.[String(cellIndex)];
+      const plantCell = getActivePlantCell(latestMatchData, cellIndex);
+      const isRivalClaim = Boolean(claim?.playerId && claim.playerId !== currentPlayerId);
+      const isPlantTarget = Boolean(plantCell?.playerId && plantCell.playerId !== currentPlayerId);
+      if (!isRivalClaim && !isPlantTarget) return;
+
+      const previousOwnerId = isRivalClaim ? claim.playerId : null;
+      const hadMetalArmor = Boolean(isRivalClaim && getActiveMetalArmor(latestMatchData, cellIndex));
       closeSpellModal();
+
+      const promptMsg = isPlantTarget
+        ? "Agita para quemar la celda germinada y convertirla en carbon"
+        : hadMetalArmor
+          ? "Agita para fundir el blindaje metalico de la casilla rival"
+          : "Agita para desatar el fuego y disipar la conquista rival";
 
       startShakeInvocation({
         spellKey: "fire",
-        spellLabel: "Fuego - Disipar Conquista",
+        spellLabel: isPlantTarget ? "Fuego - Quemar Planta" : hadMetalArmor ? "Fuego - Fundir Blindaje" : "Fuego - Disipar Conquista",
         cellIndex,
         themeClass: "theme-fire",
         glyphs: "🔥 ✦ 🔥",
-        promptText: "Agita para desatar el fuego y disipar la conquista rival",
+        promptText: promptMsg,
         onConfirmed: async () => {
           const updates = {
-            [`cellClaims.${cellIndex}`]: null,
             [`players.${currentPlayerId}.elementCharges.fire`]: 0,
             [`players.${currentPlayerId}.usedSpells.fire`]: true,
             updatedAt: serverTimestamp()
           };
-          if (hadMetalArmor) updates[`metalArmors.${cellIndex}`] = null;
 
-          const ownerData = latestMatchData.players?.[previousOwnerId];
-          if (ownerData) {
-            const neutralSet = getNeutralCellIndicesSet(latestMatchData);
-            const remainingClaims = Object.entries(latestMatchData.cellClaims || {})
-              .filter(([idxKey, c]) => Number(idxKey) !== cellIndex && !neutralSet.has(Number(idxKey)) && c && c.playerId === previousOwnerId).length;
-            const ownerConqueredEver = Math.max(
-              typeof ownerData.conqueredEverCount === "number" ? ownerData.conqueredEverCount : 0,
-              remainingClaims
-            );
-            const { cols, rows } = getGridDimensions(latestMatchData);
-            const ownerLines = countCompletedLinesForPlayer(previousOwnerId, cols, rows, latestMatchData);
-            const ownerLinesEver = Math.max(
-              typeof ownerData.linesEverCount === "number" ? ownerData.linesEverCount : 0,
-              ownerLines
-            );
-            updates[`players.${previousOwnerId}.score`] = ownerConqueredEver + ownerLinesEver * 2;
+          if (isPlantTarget) {
+            const charredUntil = Date.now() + 60000;
+            updates[`plantCells.${cellIndex}`] = null;
+            updates[`charredCells.${cellIndex}`] = {
+              burnedBy: currentPlayerId,
+              expiresAt: charredUntil,
+              createdAt: Date.now()
+            };
+          } else if (hadMetalArmor) {
+            updates[`metalArmors.${cellIndex}`] = null;
+          } else if (previousOwnerId) {
+            updates[`cellClaims.${cellIndex}`] = null;
+            const ownerData = latestMatchData.players?.[previousOwnerId];
+            if (ownerData) {
+              const projectedClaims = { ...(latestMatchData.cellClaims || {}) };
+              delete projectedClaims[String(cellIndex)];
+              const projectedMatch = { ...latestMatchData, cellClaims: projectedClaims };
+              updates[`players.${previousOwnerId}.score`] = computePlayerScore(ownerData, projectedMatch, previousOwnerId);
+            }
           }
 
           try {
@@ -3181,8 +3485,11 @@
             fireBurnCellIndices.add(cellIndex);
             if (hadMetalArmor) metalMeltCellIndices.add(cellIndex);
             pendingPostOverlaySpellCells.add(cellIndex);
+            if (latestMatchData) {
+              renderBingoGrid(latestMatchData);
+            }
           } catch (err) {
-            console.error("Error disipando conquista con Fuego:", err);
+            console.error("Error ejecutando hechizo de Fuego:", err);
           }
         }
       });
@@ -3203,6 +3510,7 @@
       };
 
       if (combo.id === "plant") {
+        if (playerHasActivePlantCell(latestMatchData, currentPlayerId)) return;
         updates[`plantCells.${cellIndex}`] = {
           playerId: currentPlayerId,
           playerName: myPlayer.name || "Un mago",
@@ -3230,9 +3538,19 @@
         });
       } else if (combo.id === "mist") {
         const rivalIds = getRivalIds(latestMatchData);
-        const veilUntil = Date.now() + 60000;
+        const now = Date.now();
+        const defaultVeilUntil = now + 60000;
         rivalIds.forEach((rid) => {
-          updates[`players.${rid}.shadowVeilUntil`] = veilUntil;
+          const rPlayer = latestMatchData.players?.[rid] || {};
+          const existingUntil = typeof rPlayer.shadowVeilUntil === "number" && rPlayer.shadowVeilUntil > now
+            ? rPlayer.shadowVeilUntil
+            : 0;
+          const prevBoost = existingUntil > 0
+            ? (typeof rPlayer.shadowVeilBoost === "number" ? rPlayer.shadowVeilBoost : 25)
+            : 0;
+          const nextBoost = Math.min(75, prevBoost + 25);
+          updates[`players.${rid}.shadowVeilBoost`] = nextBoost;
+          updates[`players.${rid}.shadowVeilUntil`] = existingUntil > 0 ? existingUntil : defaultVeilUntil;
         });
       }
 
