@@ -379,6 +379,12 @@
         transform: translateY(-34%) scale(0.92);
       }
     }
+
+    .bingo-cell.earth-locked-mine {
+      box-shadow:
+        inset 0 0 0 2px rgba(250, 204, 21, 0.85),
+        0 0 12px rgba(250, 204, 21, 0.45);
+    }
   </style>
 </head>
 <body>
@@ -806,6 +812,7 @@
     }
 
     function canWizardConquerCell(matchData, playerId, cellIndex) {
+      if (!playerId) return false;
       const claim = matchData?.cellClaims?.[String(cellIndex)];
       if (claim?.playerId) return false;
       if (getActiveCharredCell(matchData, cellIndex)) return false;
@@ -1105,14 +1112,19 @@
         const isClaimed = Boolean(claim?.playerId);
         const claimedByMe = claim?.playerId === currentPlayerId;
         const lockedByAny = Boolean(earthLock?.playerId);
+        const lockedByMe = Boolean(earthLock?.playerId && earthLock.playerId === currentPlayerId);
         const currentlyDisabled = btnArcaneSpell.disabled;
-        const shouldBeAvailable = myWasReady && !isClaimed && !lockedByAny;
+        const shouldBeAvailable = myWasReady && !isClaimed && (!lockedByAny || lockedByMe);
         if (currentlyDisabled === shouldBeAvailable) {
           setSpellButtonState(btnArcaneSpell, arcaneSpellItem, {
             used: false,
             available: shouldBeAvailable
           });
-          if (!lockedByAny && !claimedByMe) {
+          if (lockedByMe && !isClaimed) {
+            arcaneSpellDesc.textContent = !myWasReady
+              ? "Esta casilla de Tierra es tuya; espera a que cargue tu magia arcana para conquistarla."
+              : "Esta casilla de Tierra es tuya. Puedes conquistarla con tu color arcano.";
+          } else if (!lockedByAny && !claimedByMe) {
             arcaneSpellDesc.textContent = !myWasReady
               ? "La magia arcana se esta recargando (15 segundos)..."
               : claim?.playerId
@@ -1879,9 +1891,6 @@
         typeof playerData.linesEverCount === "number" ? playerData.linesEverCount : 0,
         currentLines
       );
-      // 1 pt por casilla conquistada (historica) + 2 pts por casilla activamente conquistada (incluye blindadas)
-      // + 3 pts por linea hecha/completada (historica) + 4 pts por linea actual mantenida.
-      // Si pierde conquista o linea (por aire o fuego), pierde los 2 pts activos o 4 pts de linea mantenida.
       return conqueredEver * 1 + currentClaimedCount * 2 + linesEver * 3 + currentLines * 4;
     }
 
@@ -2008,7 +2017,12 @@
         cell.querySelectorAll(".plant-owner-dot, .charred-timer-badge").forEach((el) => el.remove());
         if (charredCell) cell.classList.add("plant-charred");
         else if (plantCell) cell.classList.add("plant-germinated");
-        if (earthLock && !claim?.playerId) cell.classList.add("earth-locked");
+        if (earthLock && !claim?.playerId) {
+          cell.classList.add("earth-locked");
+          if (earthLock.playerId === currentPlayerId) {
+            cell.classList.add("earth-locked-mine");
+          }
+        }
         if (claimedColor && ARCANE_COLORS.includes(claimedColor)) cell.classList.add(`claimed-${claimedColor}`);
         if (metalArmor) cell.classList.add("metal-armored");
         if (airSourceCellIndex === i) cell.classList.add("air-selected");
@@ -2936,6 +2950,8 @@
       if (!myPlayer) return;
 
       const existingClaim = latestMatchData.cellClaims?.[String(cellIndex)];
+      const activeLock = getActiveEarthLock(latestMatchData, cellIndex);
+      if (conquer && activeLock?.playerId && activeLock.playerId !== currentPlayerId) return;
       if (conquer && (existingClaim?.playerId || !canWizardConquerCell(latestMatchData, currentPlayerId, cellIndex))) return;
 
       const updates = { updatedAt: serverTimestamp() };
@@ -3451,7 +3467,6 @@
               createdAt: Date.now()
             };
           } else if (hadMetalArmor) {
-            // Quita el blindaje metalico pero mantiene la conquista del mago con su color
             updates[`metalArmors.${cellIndex}`] = null;
           } else if (previousOwnerId) {
             updates[`cellClaims.${cellIndex}`] = null;
